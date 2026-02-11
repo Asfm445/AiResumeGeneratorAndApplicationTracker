@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from App.infrastructure.database.database import get_db
+from App.api.auth import get_current_user_id
 from App.api.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse
 from typing import List
 
@@ -12,13 +13,6 @@ router = APIRouter(
 def get_controller(db: AsyncSession = Depends(get_db)):
     return ProfileController(db)
 
-def get_current_user_id(request: Request):
-    # Mocking user ID extraction from JWT for now as "Authorization: Bearer <token>"
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-         return "user_uuid" 
-    token = auth_header.split(" ")[1]
-    return "user_uuid" # Mock value
 
 @router.put("/", response_model=ProfileResponse)
 async def update_profile(
