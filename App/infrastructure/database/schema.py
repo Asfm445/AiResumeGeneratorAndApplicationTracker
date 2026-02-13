@@ -2,6 +2,7 @@ from sqlalchemy import (
     Column, Integer, String, DateTime, ForeignKey, Text, UniqueConstraint, JSON
 )
 from App.infrastructure.database.database import Base
+from pgvector.sqlalchemy import Vector
 
 class UserProfile(Base):
     __tablename__ = 'user_profiles'
@@ -45,7 +46,6 @@ class Project(Base):
 
     name = Column(String(255), nullable=False)
     short_description = Column(String(255))
-    readme_markdown = Column(Text)
     repo_url = Column(String(255))
     status = Column(String(50), default="active")
 
@@ -74,12 +74,21 @@ class TagProject(Base):
     project_id = Column(Integer, ForeignKey('projects.id'), primary_key=True, index=True)
 
 
-class ReadmeEmbedding(Base):
-    __tablename__ = 'readme_embeddings'
+class ProjectEmbedding(Base):
+    __tablename__ = "project_embeddings"
 
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), unique=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), index=True)
 
-    embedding = Column(JSON, nullable=False)
+    embedding_type = Column(String(50), nullable=False)
+    # "overview", "features", "tech_stack"
+
+    embedding = Column(Vector(384), nullable=False)
+
     created_at = Column(DateTime, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "embedding_type"),
+    )
+
 
