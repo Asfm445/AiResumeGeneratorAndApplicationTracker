@@ -14,7 +14,7 @@ services:
       - db
 
   db:
-    image: ankane/pgvector:15
+    image: pgvector/pgvector:pg15
     container_name: db
     restart: always
     environment:
