@@ -26,5 +26,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  worker:
+    build: ./Worker
+    container_name: worker
+    volumes:
+      - ./Worker:/app
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - db
+
 volumes:
   postgres_data:

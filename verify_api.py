@@ -62,18 +62,31 @@ def test_profile_api():
         "name": "Task Manager Backend",
         "shortDescription": "Clean-architecture task management system",
         "repoUrl": "https://github.com/awel/task-manager",
-        "readme": "Long README content here...",
         "status": "completed"
     }
     response = client.post(
         "/api/v1/profile/projects",
         json=project_data,
-         headers={"Authorization": "Bearer token123"}
+        headers={"Authorization": "Bearer token123"}
     )
     print(f"POST /projects: {response.status_code}")
     print(response.json())
     assert response.status_code == 200
     project_id = response.json().get("id")
+
+    # 5.1 Create Project Description
+    desc_data = {
+        "type": "overview",
+        "text": "This is a backend project following Clean Architecture principles."
+    }
+    response = client.post(
+        f"/api/v1/profile/projects/{project_id}/description",
+        json=desc_data,
+        headers={"Authorization": "Bearer token123"}
+    )
+    print(f"POST /projects/{project_id}/description: {response.status_code}")
+    print(response.json())
+    assert response.status_code == 200
 
     # 6. Attach Title to Project
     attach_data = {
@@ -113,6 +126,26 @@ def test_profile_api():
     print(f"POST /projects/{project_id}/tags: {response.status_code}")
     print(response.json())
     assert response.status_code == 200
+
+    # 9. List Projects
+    response = client.get(
+        "/api/v1/profile/projects",
+        headers={"Authorization": "Bearer token123"}
+    )
+    print(f"GET /projects: {response.status_code}")
+    print(response.json())
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+    # 10. List Tags
+    response = client.get(
+        "/api/v1/profile/tags",
+        headers={"Authorization": "Bearer token123"}
+    )
+    print(f"GET /tags: {response.status_code}")
+    print(response.json())
+    assert response.status_code == 200
+    assert len(response.json()) > 0
 
 if __name__ == "__main__":
     test_profile_api()

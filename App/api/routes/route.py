@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from App.infrastructure.database.database import get_db
 from App.api.auth import get_current_user_id
-from App.api.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse
+from App.api.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse, DescriptionCreate
 from typing import List
 
 router = APIRouter(
@@ -58,6 +58,13 @@ async def create_project(
 ):
     return await controller.create_project(user_id, project)
 
+@router.get("/projects", response_model=List[ProjectResponse])
+async def list_projects(
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    return await controller.list_projects(user_id)
+
 @router.post("/tags", response_model=TagResponse)
 async def create_tag(
     tag: TagCreate,
@@ -65,6 +72,13 @@ async def create_tag(
     controller: ProfileController = Depends(get_controller)
 ):
     return await controller.create_tag(tag)
+
+@router.get("/tags", response_model=List[TagResponse])
+async def list_tags(
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    return await controller.list_tags()
 
 @router.post("/projects/{project_id}/titles")
 async def attach_titles_to_project(
@@ -85,3 +99,12 @@ async def attach_tags_to_project(
 ):
     tags = data.get("tags", [])
     return await controller.attach_tags_to_project(project_id, tags)
+
+@router.post("/projects/{project_id}/description")
+async def create_project_description(
+    project_id: int,
+    description: DescriptionCreate,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    return await controller.create_project_description(project_id, description)

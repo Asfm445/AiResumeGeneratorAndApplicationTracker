@@ -1,4 +1,4 @@
-from App.domain.entities.models import Project, Tag
+from App.domain.entities.models import Project, Tag, ProjectEmbedding
 from App.domain.interfaces.repositories import ProjectRepository, TagRepository
 from datetime import datetime
 from typing import List
@@ -7,18 +7,31 @@ class CreateProjectUseCase:
     def __init__(self, project_repo: ProjectRepository):
         self.project_repo = project_repo
 
-    async def execute(self, user_id: str, name: str, short_description: str, repo_url: str, readme: str, status: str) -> Project:
+    async def execute(self, user_id: str, name: str, short_description: str, repo_url: str, status: str) -> Project:
         project = Project(
             user_id=user_id,
             name=name,
             short_description=short_description,
-            readme_markdown=readme,
             repo_url=repo_url,
             status=status,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
         return await self.project_repo.create(project)
+
+class CreateProjectDescriptionUseCase:
+    def __init__(self, project_repo: ProjectRepository):
+        self.project_repo = project_repo
+
+    async def execute(self, project_id: int, description_type: str, raw_text: str) -> ProjectEmbedding:
+        from App.domain.entities.models import ProjectEmbedding
+        embedding = ProjectEmbedding(
+            project_id=project_id,
+            embedding_type=description_type,
+            raw_text=raw_text,
+            created_at=datetime.utcnow()
+        )
+        return await self.project_repo.save_embedding(embedding)
 
 class AttachTitleToProjectUseCase:
     def __init__(self, project_repo: ProjectRepository):
@@ -49,3 +62,10 @@ class AttachTagToProjectUseCase:
         
         # Now attach
         await self.project_repo.attach_tags(project_id, tag_names)
+
+class ListProjectsUseCase:
+    def __init__(self, project_repo: ProjectRepository):
+        self.project_repo = project_repo
+
+    async def execute(self, user_id: str) -> List[Project]:
+        return await self.project_repo.get_all(user_id)

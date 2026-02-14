@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from App.domain.entities.models import UserProfile, Title, Project, Tag
+from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding
 
 class ProfileRepository(ABC):
     @abstractmethod
@@ -45,6 +45,14 @@ class ProjectRepository(ABC):
     async def attach_tags(self, project_id: int, tags: List[str]):
         pass
 
+    @abstractmethod
+    async def save_embedding(self, embedding: ProjectEmbedding) -> ProjectEmbedding:
+        pass
+
+    @abstractmethod
+    async def get_embeddings(self, project_id: int) -> List[ProjectEmbedding]:
+        pass
+
 class TagRepository(ABC):
     @abstractmethod
     async def create(self, tag: Tag) -> Tag:
@@ -52,4 +60,8 @@ class TagRepository(ABC):
     
     @abstractmethod
     async def get_by_name(self, name: str) -> Optional[Tag]:
+        pass
+
+    @abstractmethod
+    async def get_all(self) -> List[Tag]:
         pass

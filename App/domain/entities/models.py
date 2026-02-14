@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 @dataclass
@@ -31,11 +31,19 @@ class Project:
     user_id: str
     name: str
     short_description: Optional[str] = None
-    readme_markdown: Optional[str] = None
     repo_url: Optional[str] = None
     status: str = "active"
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
+    id: Optional[int] = None
+
+@dataclass
+class ProjectEmbedding:
+    project_id: int
+    embedding_type: str
+    raw_text: str
+    embedding: Optional[List[float]] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
     id: Optional[int] = None
 
 @dataclass

@@ -82,8 +82,9 @@ class ProjectEmbedding(Base):
 
     embedding_type = Column(String(50), nullable=False)
     # "overview", "features", "tech_stack"
+    raw_text = Column(Text, nullable=False)
 
-    embedding = Column(Vector(384), nullable=False)
+    embedding = Column(Vector(384), nullable=True)
 
     created_at = Column(DateTime, nullable=False)
 

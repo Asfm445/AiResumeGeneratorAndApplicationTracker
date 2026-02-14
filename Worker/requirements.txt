@@ -1,0 +1,5 @@
+sentence-transformers
+sqlalchemy
+psycopg[binary]
+pgvector
+python-dotenv

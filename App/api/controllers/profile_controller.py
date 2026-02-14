@@ -2,8 +2,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from App.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository
 from App.application.use_cases.profile_use_cases import CreateOrUpdateProfileUseCase, GetProfileUseCase
 from App.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase
-from App.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase
-from App.application.use_cases.tag_use_cases import CreateTagUseCase
+from App.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase, CreateProjectDescriptionUseCase, ListProjectsUseCase
+from App.application.use_cases.tag_use_cases import CreateTagUseCase, ListTagsUseCase
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -35,10 +35,13 @@ class TitleResponse(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str
-    shortDescription: Optional[str] = None
+    shortDescription: Optional[str] = Field(None, max_length=255)
     repoUrl: Optional[str] = None
-    readme: Optional[str] = None
     status: str = "active"
+
+class DescriptionCreate(BaseModel):
+    type: str # overview, features, tech_stack
+    text: str
 
 class ProjectResponse(BaseModel):
     id: str
@@ -66,8 +69,11 @@ class ProfileController:
         self.create_title_uc = CreateTitleUseCase(title_repo)
         self.list_titles_uc = ListTitlesUseCase(title_repo)
         self.create_project_uc = CreateProjectUseCase(project_repo)
+        self.create_description_uc = CreateProjectDescriptionUseCase(project_repo)
         self.attach_titles_uc = AttachTitleToProjectUseCase(project_repo)
+        self.list_projects_uc = ListProjectsUseCase(project_repo)
         self.create_tag_uc = CreateTagUseCase(tag_repo)
+        self.list_tags_uc = ListTagsUseCase(tag_repo)
         self.attach_tags_uc = AttachTagToProjectUseCase(project_repo, tag_repo)
 
     async def create_or_update_profile(self, user_id: str, data: ProfileUpdate):
@@ -125,7 +131,6 @@ class ProfileController:
             name=data.name,
             short_description=data.shortDescription,
             repo_url=data.repoUrl,
-            readme=data.readme,
             status=data.status
         )
         return ProjectResponse(
@@ -148,3 +153,26 @@ class ProfileController:
     async def attach_tags_to_project(self, project_id: int, tag_names: List[str]):
         await self.attach_tags_uc.execute(project_id, tag_names)
         return {"message": "Tags attached"}
+
+    async def create_project_description(self, project_id: int, data: DescriptionCreate):
+        await self.create_description_uc.execute(project_id, data.type, data.text)
+        return {"message": "Description created"}
+
+    async def list_projects(self, user_id: str):
+        projects = await self.list_projects_uc.execute(user_id)
+        return [
+            ProjectResponse(
+                id=str(p.id),
+                name=p.name,
+                status=p.status
+            ) for p in projects
+        ]
+
+    async def list_tags(self):
+        tags = await self.list_tags_uc.execute()
+        return [
+            TagResponse(
+                id=t.tag_id,
+                name=t.tag_name
+            ) for t in tags
+        ]

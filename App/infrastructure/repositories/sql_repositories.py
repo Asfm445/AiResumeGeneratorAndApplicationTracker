@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from App.domain.entities.models import UserProfile, Title, Project, Tag
+from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding
 from App.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository
 from App.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject
 from datetime import datetime
@@ -116,7 +116,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             user_id=project.user_id,
             name=project.name,
             short_description=project.short_description,
-            readme_markdown=project.readme_markdown,
             repo_url=project.repo_url,
             status=project.status,
             created_at=datetime.utcnow(),
@@ -188,13 +187,43 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         
         await self.session.commit()
 
+    async def save_embedding(self, embedding: ProjectEmbedding) -> ProjectEmbedding:
+        from App.infrastructure.database.schema import ProjectEmbedding as DBProjectEmbedding
+        db_emb = DBProjectEmbedding(
+            project_id=embedding.project_id,
+            embedding_type=embedding.embedding_type,
+            raw_text=embedding.raw_text,
+            embedding=embedding.embedding,
+            created_at=datetime.utcnow()
+        )
+        self.session.add(db_emb)
+        await self.session.commit()
+        await self.session.refresh(db_emb)
+        embedding.id = db_emb.id
+        return embedding
+
+    async def get_embeddings(self, project_id: int) -> List[ProjectEmbedding]:
+        from App.infrastructure.database.schema import ProjectEmbedding as DBProjectEmbedding
+        stmt = select(DBProjectEmbedding).filter_by(project_id=project_id)
+        result = await self.session.execute(stmt)
+        db_embs = result.scalars().all()
+        return [
+            ProjectEmbedding(
+                id=e.id,
+                project_id=e.project_id,
+                embedding_type=e.embedding_type,
+                raw_text=e.raw_text,
+                embedding=e.embedding,
+                created_at=e.created_at
+            ) for e in db_embs
+        ]
+
     def _to_domain(self, db_project: DBProject) -> Project:
         return Project(
             id=db_project.id,
             user_id=db_project.user_id,
             name=db_project.name,
             short_description=db_project.short_description,
-            readme_markdown=db_project.readme_markdown,
             repo_url=db_project.repo_url,
             status=db_project.status,
             created_at=db_project.created_at,
@@ -225,6 +254,12 @@ class SqlAlchemyTagRepository(TagRepository):
          if db_tag:
              return self._to_domain(db_tag)
          return None
+
+     async def get_all(self) -> List[Tag]:
+         stmt = select(DBTag)
+         result = await self.session.execute(stmt)
+         db_tags = result.scalars().all()
+         return [self._to_domain(t) for t in db_tags]
 
      def _to_domain(self, db_tag: DBTag) -> Tag:
          return Tag(
