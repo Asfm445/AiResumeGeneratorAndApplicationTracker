@@ -2,7 +2,7 @@ from sqlalchemy import (
     Column, Integer, String, DateTime, ForeignKey, Text, UniqueConstraint, JSON
 )
 from sqlalchemy.orm import relationship
-from App.infrastructure.database.database import Base
+from App.profile_management.infrastructure.database.database import Base
 from pgvector.sqlalchemy import Vector
 
 class UserProfile(Base):

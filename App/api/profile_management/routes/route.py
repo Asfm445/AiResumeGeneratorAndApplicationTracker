@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from App.infrastructure.database.database import get_db
+from App.profile_management.infrastructure.database.database import get_db
 from App.api.auth import get_current_user_id
-from App.api.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse, DescriptionCreate, ExprianceCreate, ExprianceUpdate, ExprianceResponse, SkillCreate, SkillUpdate, SkillResponse
+from App.api.profile_management.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse, DescriptionCreate, ExprianceCreate, ExprianceUpdate, ExprianceResponse, SkillCreate, SkillUpdate, SkillResponse
 from typing import List
 
 router = APIRouter(

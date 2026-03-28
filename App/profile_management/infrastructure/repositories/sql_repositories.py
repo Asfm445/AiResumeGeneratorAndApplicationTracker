@@ -2,9 +2,9 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from sqlalchemy.orm import selectinload
-from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill
-from App.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository
-from App.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository
+from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill
 from datetime import datetime
 
 class SqlAlchemyProfileRepository(ProfileRepository):
@@ -189,7 +189,7 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         await self.session.commit()
 
     async def save_embedding(self, embedding: ProjectEmbedding) -> ProjectEmbedding:
-        from App.infrastructure.database.schema import ProjectEmbedding as DBProjectEmbedding
+        from App.profile_management.infrastructure.database.schema import ProjectEmbedding as DBProjectEmbedding
         db_emb = DBProjectEmbedding(
             project_id=embedding.project_id,
             embedding_type=embedding.embedding_type,
@@ -204,7 +204,7 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         return embedding
 
     async def get_embeddings(self, project_id: int) -> List[ProjectEmbedding]:
-        from App.infrastructure.database.schema import ProjectEmbedding as DBProjectEmbedding
+        from App.profile_management.infrastructure.database.schema import ProjectEmbedding as DBProjectEmbedding
         stmt = select(DBProjectEmbedding).filter_by(project_id=project_id)
         result = await self.session.execute(stmt)
         db_embs = result.scalars().all()

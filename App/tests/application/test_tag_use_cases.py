@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from App.application.use_cases.tag_use_cases import CreateTagUseCase
-from App.domain.entities.models import Tag
+from App.profile_management.domain.entities.models import Tag
 
 @pytest.fixture
 def mock_tag_repo():

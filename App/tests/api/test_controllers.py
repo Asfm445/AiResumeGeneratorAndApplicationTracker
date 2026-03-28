@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from App.api.controllers.profile_controller import ProfileController, ProfileUpdate, TitleCreate, ProjectCreate, TagCreate, ProfileResponse, TitleResponse, ProjectResponse, TagResponse
-from App.domain.entities.models import UserProfile, Title, Project, Tag
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag
 from datetime import datetime
 
 @pytest.fixture

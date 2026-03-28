@@ -1,5 +1,5 @@
-from App.domain.entities.models import UserProfile
-from App.domain.interfaces.repositories import ProfileRepository
+from App.profile_management.domain.entities.models import UserProfile
+from App.profile_management.domain.interfaces.repositories import ProfileRepository
 from datetime import datetime
 
 class CreateOrUpdateProfileUseCase:

@@ -1,5 +1,5 @@
-from App.domain.entities.models import Skill
-from App.domain.interfaces.repositories import SkillRepository
+from App.profile_management.domain.entities.models import Skill
+from App.profile_management.domain.interfaces.repositories import SkillRepository
 from datetime import datetime
 from typing import List, Optional
 

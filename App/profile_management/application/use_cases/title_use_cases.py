@@ -1,5 +1,5 @@
-from App.domain.entities.models import Title
-from App.domain.interfaces.repositories import TitleRepository
+from App.profile_management.domain.entities.models import Title
+from App.profile_management.domain.interfaces.repositories import TitleRepository
 from datetime import datetime
 from typing import List
 

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from App.application.use_cases.profile_use_cases import CreateOrUpdateProfileUseCase, GetProfileUseCase
-from App.domain.entities.models import UserProfile # Correct import path based on previous exploration
+from App.profile_management.domain.entities.models import UserProfile # Correct import path based on previous exploration
 
 @pytest.fixture
 def mock_profile_repo():

@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from App.domain.entities.models import UserProfile, Title, Project, Tag
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag
 
 def test_user_profile_initialization():
     profile = UserProfile(

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from App.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase
-from App.domain.entities.models import Project, Tag
+from App.profile_management.domain.entities.models import Project, Tag
 
 @pytest.fixture
 def mock_project_repo():

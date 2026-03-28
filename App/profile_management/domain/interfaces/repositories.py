@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, Expriance, Skill
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, Expriance, Skill
 
 class ProfileRepository(ABC):
     @abstractmethod

@@ -1,11 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from App.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository
-from App.application.use_cases.profile_use_cases import CreateOrUpdateProfileUseCase, GetProfileUseCase
-from App.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase
-from App.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase, CreateProjectDescriptionUseCase, ListProjectsUseCase
-from App.application.use_cases.tag_use_cases import CreateTagUseCase, ListTagsUseCase
-from App.application.use_cases.experience_use_cases import CreateExprianceUseCase, UpdateExprianceUseCase, ListExpriancesUseCase, GetExprianceUseCase, DeleteExprianceUseCase
-from App.application.use_cases.skill_use_cases import CreateSkillUseCase, UpdateSkillUseCase, ListSkillsUseCase, GetSkillUseCase, DeleteSkillUseCase
+from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository
+from App.profile_management.application.use_cases.profile_use_cases import CreateOrUpdateProfileUseCase, GetProfileUseCase
+from App.profile_management.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase
+from App.profile_management.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase, CreateProjectDescriptionUseCase, ListProjectsUseCase
+from App.profile_management.application.use_cases.tag_use_cases import CreateTagUseCase, ListTagsUseCase
+from App.profile_management.application.use_cases.experience_use_cases import CreateExprianceUseCase, UpdateExprianceUseCase, ListExpriancesUseCase, GetExprianceUseCase, DeleteExprianceUseCase
+from App.profile_management.application.use_cases.skill_use_cases import CreateSkillUseCase, UpdateSkillUseCase, ListSkillsUseCase, GetSkillUseCase, DeleteSkillUseCase
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime

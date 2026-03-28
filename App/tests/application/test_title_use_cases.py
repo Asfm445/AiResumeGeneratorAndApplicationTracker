@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from App.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase
-from App.domain.entities.models import Title
+from App.profile_management.domain.entities.models import Title
 
 @pytest.fixture
 def mock_title_repo():

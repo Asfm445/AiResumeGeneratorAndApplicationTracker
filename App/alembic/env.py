@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from alembic import context
 import os
 from dotenv import load_dotenv
-from App.infrastructure.database.database import Base
+from App.profile_management.infrastructure.database.database import Base
 import App.infrastructure.database.schema  # noqa: F401
 
 load_dotenv()

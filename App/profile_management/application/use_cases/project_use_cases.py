@@ -1,5 +1,5 @@
-from App.domain.entities.models import Project, Tag, ProjectEmbedding
-from App.domain.interfaces.repositories import ProjectRepository, TagRepository
+from App.profile_management.domain.entities.models import Project, Tag, ProjectEmbedding
+from App.profile_management.domain.interfaces.repositories import ProjectRepository, TagRepository
 from datetime import datetime
 from typing import List
 
@@ -24,7 +24,6 @@ class CreateProjectDescriptionUseCase:
         self.project_repo = project_repo
 
     async def execute(self, project_id: int, description_type: str, raw_text: str) -> ProjectEmbedding:
-        from App.domain.entities.models import ProjectEmbedding
         embedding = ProjectEmbedding(
             project_id=project_id,
             embedding_type=description_type,
