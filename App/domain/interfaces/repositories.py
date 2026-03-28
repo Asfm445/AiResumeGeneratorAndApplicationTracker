@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding
+from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, Expriance, Skill
 
 class ProfileRepository(ABC):
     @abstractmethod
@@ -64,4 +64,46 @@ class TagRepository(ABC):
 
     @abstractmethod
     async def get_all(self) -> List[Tag]:
+        pass
+
+class ExprianceRepository(ABC):
+    @abstractmethod
+    async def create(self, expriance: 'Expriance') -> 'Expriance':
+        pass
+
+    @abstractmethod
+    async def update(self, expriance: 'Expriance') -> 'Expriance':
+        pass
+
+    @abstractmethod
+    async def get_all(self, user_id: str) -> List['Expriance']:
+        pass
+
+    @abstractmethod
+    async def get_by_id(self, expriance_id: int) -> Optional['Expriance']:
+        pass
+    
+    @abstractmethod
+    async def delete(self, expriance_id: int) -> bool:
+        pass
+
+class SkillRepository(ABC):
+    @abstractmethod
+    async def create(self, skill: 'Skill') -> 'Skill':
+        pass
+
+    @abstractmethod
+    async def update(self, skill: 'Skill') -> 'Skill':
+        pass
+
+    @abstractmethod
+    async def get_all(self, user_id: str) -> List['Skill']:
+        pass
+
+    @abstractmethod
+    async def get_by_id(self, skill_id: int) -> Optional['Skill']:
+        pass
+    
+    @abstractmethod
+    async def delete(self, skill_id: int) -> bool:
         pass

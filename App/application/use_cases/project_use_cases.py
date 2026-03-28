@@ -68,4 +68,5 @@ class ListProjectsUseCase:
         self.project_repo = project_repo
 
     async def execute(self, user_id: str) -> List[Project]:
-        return await self.project_repo.get_all(user_id)
+        result = await self.project_repo.get_all(user_id)
+        return result

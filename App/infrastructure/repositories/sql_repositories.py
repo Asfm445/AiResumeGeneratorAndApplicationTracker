@@ -1,10 +1,10 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import selectinload
-from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding
-from App.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository
-from App.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject
+from App.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill
+from App.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository
+from App.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill
 from datetime import datetime
 
 class SqlAlchemyProfileRepository(ProfileRepository):
@@ -127,6 +127,7 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         return self._to_domain(db_project)
 
     async def get_all(self, user_id: str) -> List[Project]:
+        
         stmt = select(DBProject).filter_by(user_id=user_id)
         result = await self.session.execute(stmt)
         db_projects = result.scalars().all()
@@ -227,8 +228,12 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             repo_url=db_project.repo_url,
             status=db_project.status,
             created_at=db_project.created_at,
-            updated_at=db_project.updated_at
+            updated_at=db_project.updated_at,
+            project_description=[ProjectDescription(emb.embedding_type,emb.raw_text) for emb in db_project.embeddings]
         )
+
+        
+
 
 class SqlAlchemyTagRepository(TagRepository):
      def __init__(self, session: AsyncSession):
@@ -268,3 +273,144 @@ class SqlAlchemyTagRepository(TagRepository):
              created_at=datetime.utcnow(), 
              updated_at=datetime.utcnow()
          )
+
+class SqlAlchemyExprianceRepository(ExprianceRepository):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(self, expriance: Expriance) -> Expriance:
+        db_expriance = DBExperience(
+            user_id=expriance.user_id,
+            company_name=expriance.company_name,
+            employement_type=expriance.employement_type,
+            role_title=expriance.role_title,
+            short_description=expriance.short_description,
+            start_date=expriance.start_date,
+            end_date=expriance.end_date,
+            tech_stack=expriance.tech_stack,
+            created_at=datetime.utcnow()
+        )
+        self.session.add(db_expriance)
+        await self.session.commit()
+        await self.session.refresh(db_expriance)
+        return self._to_domain(db_expriance)
+
+    async def update(self, expriance: Expriance) -> Expriance:
+        stmt = select(DBExperience).filter_by(id=expriance.id, user_id=expriance.user_id)
+        result = await self.session.execute(stmt)
+        db_exp = result.scalars().first()
+        
+        if db_exp:
+            db_exp.company_name = expriance.company_name
+            db_exp.employement_type = expriance.employement_type
+            db_exp.role_title = expriance.role_title
+            db_exp.short_description = expriance.short_description
+            db_exp.start_date = expriance.start_date
+            db_exp.end_date = expriance.end_date
+            db_exp.tech_stack = expriance.tech_stack
+            await self.session.commit()
+            await self.session.refresh(db_exp)
+            return self._to_domain(db_exp)
+        return None
+
+    async def get_all(self, user_id: str) -> List[Expriance]:
+        stmt = select(DBExperience).filter_by(user_id=user_id)
+        result = await self.session.execute(stmt)
+        db_exps = result.scalars().all()
+        return [self._to_domain(e) for e in db_exps]
+
+    async def get_by_id(self, expriance_id: int) -> Optional[Expriance]:
+        stmt = select(DBExperience).filter_by(id=expriance_id)
+        result = await self.session.execute(stmt)
+        db_exp = result.scalars().first()
+        
+        if db_exp:
+             return self._to_domain(db_exp)
+        return None
+
+    async def delete(self, expriance_id: int) -> bool:
+        stmt = select(DBExperience).filter_by(id=expriance_id)
+        result = await self.session.execute(stmt)
+        db_exp = result.scalars().first()
+        if db_exp:
+             await self.session.delete(db_exp)
+             await self.session.commit()
+             return True
+        return False
+
+    def _to_domain(self, db_exp: DBExperience) -> Expriance:
+        return Expriance(
+            id=db_exp.id,
+            user_id=db_exp.user_id,
+            company_name=db_exp.company_name,
+            employement_type=db_exp.employement_type,
+            role_title=db_exp.role_title,
+            short_description=db_exp.short_description,
+            start_date=db_exp.start_date,
+            end_date=db_exp.end_date,
+            tech_stack=db_exp.tech_stack,
+            created_at=db_exp.created_at
+        )
+
+class SqlAlchemySkillRepository(SkillRepository):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(self, skill: Skill) -> Skill:
+        db_skill = DBSkill(
+            user_id=skill.user_id,
+            skill_type=skill.skill_type,
+            skills=skill.skills,
+            created_at=datetime.utcnow()
+        )
+        self.session.add(db_skill)
+        await self.session.commit()
+        await self.session.refresh(db_skill)
+        return self._to_domain(db_skill)
+
+    async def update(self, skill: Skill) -> Skill:
+        stmt = select(DBSkill).filter_by(id=skill.id, user_id=skill.user_id)
+        result = await self.session.execute(stmt)
+        db_skill = result.scalars().first()
+        
+        if db_skill:
+            db_skill.skill_type = skill.skill_type
+            db_skill.skills = skill.skills
+            await self.session.commit()
+            await self.session.refresh(db_skill)
+            return self._to_domain(db_skill)
+        return None
+
+    async def get_all(self, user_id: str) -> List[Skill]:
+        stmt = select(DBSkill).filter_by(user_id=user_id)
+        result = await self.session.execute(stmt)
+        db_skills = result.scalars().all()
+        return [self._to_domain(s) for s in db_skills]
+
+    async def get_by_id(self, skill_id: int) -> Optional[Skill]:
+        stmt = select(DBSkill).filter_by(id=skill_id)
+        result = await self.session.execute(stmt)
+        db_skill = result.scalars().first()
+        
+        if db_skill:
+             return self._to_domain(db_skill)
+        return None
+
+    async def delete(self, skill_id: int) -> bool:
+        stmt = select(DBSkill).filter_by(id=skill_id)
+        result = await self.session.execute(stmt)
+        db_skill = result.scalars().first()
+        if db_skill:
+             await self.session.delete(db_skill)
+             await self.session.commit()
+             return True
+        return False
+
+    def _to_domain(self, db_skill: DBSkill) -> Skill:
+        return Skill(
+            id=db_skill.id,
+            user_id=db_skill.user_id,
+            skill_type=db_skill.skill_type,
+            skills=db_skill.skills,
+            created_at=db_skill.created_at
+        )

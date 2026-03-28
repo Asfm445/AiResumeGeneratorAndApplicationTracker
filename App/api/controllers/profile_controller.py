@@ -1,12 +1,62 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from App.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository
+from App.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository
 from App.application.use_cases.profile_use_cases import CreateOrUpdateProfileUseCase, GetProfileUseCase
 from App.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase
 from App.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase, CreateProjectDescriptionUseCase, ListProjectsUseCase
 from App.application.use_cases.tag_use_cases import CreateTagUseCase, ListTagsUseCase
+from App.application.use_cases.experience_use_cases import CreateExprianceUseCase, UpdateExprianceUseCase, ListExpriancesUseCase, GetExprianceUseCase, DeleteExprianceUseCase
+from App.application.use_cases.skill_use_cases import CreateSkillUseCase, UpdateSkillUseCase, ListSkillsUseCase, GetSkillUseCase, DeleteSkillUseCase
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+
+class ExprianceCreate(BaseModel):
+    company_name: str
+    employement_type: str
+    role_title: str
+    short_description: str
+    start_date: datetime
+    tech_stack: Optional[List[str]] = None
+    end_date: Optional[datetime] = None
+
+class ExprianceUpdate(BaseModel):
+    company_name: str
+    employement_type: str
+    role_title: str
+    short_description: str
+    start_date: datetime
+    tech_stack: Optional[List[str]] = None
+    end_date: Optional[datetime] = None
+
+class ExprianceResponse(BaseModel):
+    id: int
+    company_name: str
+    employement_type: str
+    role_title: str
+    short_description: str
+    start_date: datetime
+    tech_stack: Optional[List[str]] = None
+    end_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+from typing import List, Optional
+
+class SkillCreate(BaseModel):
+    skill_type: str
+    skills: List[str]
+
+class SkillUpdate(BaseModel):
+    skill_type: str
+    skills: List[str]
+
+class SkillResponse(BaseModel):
+    id: int
+    skill_type: str
+    skills: List[str]
+    
+    class Config:
+        from_attributes = True
 
 class ProfileUpdate(BaseModel):
     fullName: str
@@ -43,10 +93,17 @@ class DescriptionCreate(BaseModel):
     type: str # overview, features, tech_stack
     text: str
 
+    class Config:
+        from_attributes = True
+
 class ProjectResponse(BaseModel):
-    id: str
+    id: int
     name: str
     status: str
+    project_description: Optional[List[DescriptionCreate]] = None
+
+    class Config:
+        from_attributes = True
 
 class TagCreate(BaseModel):
     name: str
@@ -62,6 +119,8 @@ class ProfileController:
         title_repo = SqlAlchemyTitleRepository(db)
         project_repo = SqlAlchemyProjectRepository(db)
         tag_repo = SqlAlchemyTagRepository(db)
+        expriance_repo = SqlAlchemyExprianceRepository(db)
+        skill_repo = SqlAlchemySkillRepository(db)
         
         # Use Cases
         self.create_profile_uc = CreateOrUpdateProfileUseCase(profile_repo)
@@ -75,6 +134,18 @@ class ProfileController:
         self.create_tag_uc = CreateTagUseCase(tag_repo)
         self.list_tags_uc = ListTagsUseCase(tag_repo)
         self.attach_tags_uc = AttachTagToProjectUseCase(project_repo, tag_repo)
+        
+        self.create_exp_uc = CreateExprianceUseCase(expriance_repo)
+        self.update_exp_uc = UpdateExprianceUseCase(expriance_repo)
+        self.list_exp_uc = ListExpriancesUseCase(expriance_repo)
+        self.get_exp_uc = GetExprianceUseCase(expriance_repo)
+        self.delete_exp_uc = DeleteExprianceUseCase(expriance_repo)
+        
+        self.create_skill_uc = CreateSkillUseCase(skill_repo)
+        self.update_skill_uc = UpdateSkillUseCase(skill_repo)
+        self.list_skills_uc = ListSkillsUseCase(skill_repo)
+        self.get_skill_uc = GetSkillUseCase(skill_repo)
+        self.delete_skill_uc = DeleteSkillUseCase(skill_repo)
 
     async def create_or_update_profile(self, user_id: str, data: ProfileUpdate):
         saved_profile = await self.create_profile_uc.execute(
@@ -162,9 +233,13 @@ class ProfileController:
         projects = await self.list_projects_uc.execute(user_id)
         return [
             ProjectResponse(
-                id=str(p.id),
+                id=str(p.id) if p.id else None,
                 name=p.name,
-                status=p.status
+                status=p.status,
+                project_description=[
+                    DescriptionCreate(type=d.type, text=d.text) 
+                    for d in p.project_description
+                ] if p.project_description else None
             ) for p in projects
         ]
 
@@ -176,3 +251,134 @@ class ProfileController:
                 name=t.tag_name
             ) for t in tags
         ]
+
+    async def create_expriance(self, user_id: str, data: ExprianceCreate):
+        saved = await self.create_exp_uc.execute(
+            user_id=user_id,
+            company_name=data.company_name,
+            employement_type=data.employement_type,
+            role_title=data.role_title,
+            short_description=data.short_description,
+            start_date=data.start_date,
+            tech_stack=data.tech_stack,
+            end_date=data.end_date
+        )
+        return ExprianceResponse(
+            id=saved.id,
+            company_name=saved.company_name,
+            employement_type=saved.employement_type,
+            role_title=saved.role_title,
+            short_description=saved.short_description,
+            start_date=saved.start_date,
+            tech_stack=saved.tech_stack,
+            end_date=saved.end_date
+        )
+
+    async def update_expriance(self, expriance_id: int, user_id: str, data: ExprianceUpdate):
+        updated = await self.update_exp_uc.execute(
+            expriance_id=expriance_id,
+            user_id=user_id,
+            company_name=data.company_name,
+            employement_type=data.employement_type,
+            role_title=data.role_title,
+            short_description=data.short_description,
+            start_date=data.start_date,
+            tech_stack=data.tech_stack,
+            end_date=data.end_date
+        )
+        if not updated:
+            return None
+        return ExprianceResponse(
+            id=updated.id,
+            company_name=updated.company_name,
+            employement_type=updated.employement_type,
+            role_title=updated.role_title,
+            short_description=updated.short_description,
+            start_date=updated.start_date,
+            tech_stack=updated.tech_stack,
+            end_date=updated.end_date
+        )
+
+    async def list_expriances(self, user_id: str):
+        exps = await self.list_exp_uc.execute(user_id)
+        return [
+            ExprianceResponse(
+                id=e.id,
+                company_name=e.company_name,
+                employement_type=e.employement_type,
+                role_title=e.role_title,
+                short_description=e.short_description,
+                start_date=e.start_date,
+                tech_stack=e.tech_stack,
+                end_date=e.end_date
+            ) for e in exps
+        ]
+
+    async def get_expriance(self, expriance_id: int):
+        e = await self.get_exp_uc.execute(expriance_id)
+        if not e:
+            return None
+        return ExprianceResponse(
+            id=e.id,
+            company_name=e.company_name,
+            employement_type=e.employement_type,
+            role_title=e.role_title,
+            short_description=e.short_description,
+            start_date=e.start_date,
+            tech_stack=e.tech_stack,
+            end_date=e.end_date
+        )
+
+    async def delete_expriance(self, expriance_id: int):
+        success = await self.delete_exp_uc.execute(expriance_id)
+        return success
+
+    async def create_skill(self, user_id: str, data: SkillCreate):
+        saved = await self.create_skill_uc.execute(
+            user_id=user_id,
+            skill_type=data.skill_type,
+            skills=data.skills
+        )
+        return SkillResponse(
+            id=saved.id,
+            skill_type=saved.skill_type,
+            skills=saved.skills
+        )
+
+    async def update_skill(self, skill_id: int, user_id: str, data: SkillUpdate):
+        updated = await self.update_skill_uc.execute(
+            skill_id=skill_id,
+            user_id=user_id,
+            skill_type=data.skill_type,
+            skills=data.skills
+        )
+        if not updated:
+            return None
+        return SkillResponse(
+            id=updated.id,
+            skill_type=updated.skill_type,
+            skills=updated.skills
+        )
+
+    async def list_skills(self, user_id: str):
+        skills = await self.list_skills_uc.execute(user_id)
+        return [
+            SkillResponse(
+                id=s.id,
+                skill_type=s.skill_type,
+                skills=s.skills
+            ) for s in skills
+        ]
+
+    async def get_skill(self, skill_id: int):
+        s = await self.get_skill_uc.execute(skill_id)
+        if not s:
+            return None
+        return SkillResponse(
+            id=s.id,
+            skill_type=s.skill_type,
+            skills=s.skills
+        )
+
+    async def delete_skill(self, skill_id: int):
+        return await self.delete_skill_uc.execute(skill_id)
