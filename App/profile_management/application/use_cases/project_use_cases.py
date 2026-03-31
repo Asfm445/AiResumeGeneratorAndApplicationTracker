@@ -36,7 +36,7 @@ class AttachTitleToProjectUseCase:
     def __init__(self, project_repo: ProjectRepository):
         self.project_repo = project_repo
 
-    async def execute(self, project_id: int, title_ids: List[str]):
+    async def execute(self, user_id: str, project_id: int, title_ids: List[int]):
         # Parse IDs: Assuming str provided, need int if project table expects int
         int_ids = []
         for tid in title_ids:
@@ -45,7 +45,8 @@ class AttachTitleToProjectUseCase:
             elif isinstance(tid, int):
                 int_ids.append(tid)
         
-        await self.project_repo.attach_titles(project_id, int_ids)
+        res=await self.project_repo.attach_titles(user_id,project_id, int_ids)
+        return res
 
 class AttachTagToProjectUseCase:
     def __init__(self, project_repo: ProjectRepository, tag_repo: TagRepository):

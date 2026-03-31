@@ -142,17 +142,47 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             return self._to_domain(db_project)
         return None
 
-    async def attach_titles(self, project_id: int, title_ids: List[int]):
+    async def attach_titles(self, user_id: str, project_id: int, title_ids: List[int]):
         for t_id in title_ids:
             # Check if association already exists
             stmt = select(TitleProject).filter_by(title_id=t_id, project_id=project_id)
             result = await self.session.execute(stmt)
             exists = result.scalars().first()
-            
             if not exists:
-                assoc = TitleProject(title_id=t_id, project_id=project_id)
-                self.session.add(assoc)
+                # check if both project with this user id and title exist
+                stmt = select(DBProject).filter_by(user_id=user_id, id=project_id)
+                result = await self.session.execute(stmt)
+                exists = result.scalars().first()
+                if exists:
+                    stmt = select(DBTitle).filter_by(user_id=user_id, id=t_id)
+                    result = await self.session.execute(stmt)
+                    exists = result.scalars().first()
+                    if exists:
+                        assoc = TitleProject(title_id=t_id, project_id=project_id)
+                        self.session.add(assoc)
         await self.session.commit()
+
+    async def get_project_by_title_name(self,user_id, title_name: str) -> Optional[List[Project]]:
+        stmt = select(DBTitle).filter_by(title_name=title_name, user_id=user_id)
+        result = await self.session.execute(stmt)
+        db_title = result.scalars().first()
+        if not db_title:
+            return None
+        stmt = select(TitleProject).filter_by(title_id=db_title.id)
+        result = await self.session.execute(stmt)
+        db_title_project = result.scalars().all()
+        if not db_title_project:
+            return None
+        projects = []
+        for tp in db_title_project:
+            stmt = select(DBProject).filter_by(id=tp.project_id)
+            result = await self.session.execute(stmt)
+            db_project = result.scalars().first()
+            if db_project:
+                projects.append(self._to_domain(db_project))
+        return projects
+        
+        
 
     async def attach_tags(self, project_id: int, tags: List[str]):
         # Implementation for attaching tags (assuming tags already exist or we create them)

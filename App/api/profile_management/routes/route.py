@@ -87,8 +87,8 @@ async def attach_titles_to_project(
     user_id: str = Depends(get_current_user_id),
     controller: ProfileController = Depends(get_controller)
 ):
-    title_ids = data.get("titleIds", [])
-    return await controller.attach_titles_to_project(project_id, title_ids)
+    title_ids = data.get("title_ids", [])
+    return await controller.attach_titles_to_project(user_id,project_id, title_ids)
 
 @router.post("/projects/{project_id}/tags")
 async def attach_tags_to_project(

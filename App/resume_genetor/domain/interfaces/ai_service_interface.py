@@ -23,13 +23,5 @@ class AiServiceInterface(ABC):
         pass
 
     @abstractmethod
-    async def generate_professional_summary(self, profile_data: Dict) -> str:
-        """Generate a professional summary based on user profile data.
-
-        Args:
-            profile_data: Dictionary containing user profile information
-
-        Returns:
-            A professional summary string (4-5 lines max)
-        """
+    async def generate_resume(self, profile_data: Dict) -> str:
         pass

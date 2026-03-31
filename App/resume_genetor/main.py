@@ -1,5 +1,5 @@
 from App.resume_genetor.application.usecase.resume_usecase import ResumeUseCase
-from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository
+from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository
 from App.profile_management.infrastructure.database.database import get_db
 from App.resume_genetor.infrastructure.services.ai_service import AiService
 import os
@@ -9,7 +9,7 @@ import asyncio
 
 load_dotenv()
 
-token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGQzZWM1Mi1mM2ZhLTRkZDYtYmQ0MS02Y2MxOWY2ZWRiMzYiLCJyb2xlcyI6WyJidXllciIsInNlbGxlciJdLCJyb2xlIjoiYnV5ZXIiLCJpYXQiOjE3NzQ3MjE2ODYsImV4cCI6MTc3NDcyMjU4Nn0.dCl4YV2GiUmrUIrNYK9M_FfYfpaBnvPH87zhOVBPp58"
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGQzZWM1Mi1mM2ZhLTRkZDYtYmQ0MS02Y2MxOWY2ZWRiMzYiLCJyb2xlcyI6WyJidXllciIsInNlbGxlciJdLCJyb2xlIjoiYnV5ZXIiLCJpYXQiOjE3NzQ4OTcyNjIsImV4cCI6MTc3NDg5ODE2Mn0.MiNjQYHcuV8fTQwbP4SEefEPJf1KVBXH_OwWADm_ebQ"
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -28,9 +28,11 @@ async def test_generate_resume():
         title_repo = SqlAlchemyTitleRepository(db)
         skill_repo = SqlAlchemySkillRepository(db)
         ai_service = AiService()
+        expriance_repo = SqlAlchemyExprianceRepository(db)
+        project_repo = SqlAlchemyProjectRepository(db)
         
         # Create use case
-        resume_use_case = ResumeUseCase(profile_repo=repo, ai_service=ai_service, title_repo=title_repo, skill_repo=skill_repo)
+        resume_use_case = ResumeUseCase(profile_repo=repo, ai_service=ai_service, title_repo=title_repo, skill_repo=skill_repo, expriance_repo=expriance_repo, project_repo=project_repo)
         
         professional_summary = await resume_use_case.generate_resume(user_id)
 

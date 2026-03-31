@@ -210,9 +210,9 @@ class ProfileController:
             status=saved_project.status
         )
 
-    async def attach_titles_to_project(self, project_id: int, title_ids: List[str]):
-        await self.attach_titles_uc.execute(project_id, title_ids)
-        return {"message": "Titles attached"}
+    async def attach_titles_to_project(self, user_id: str, project_id: int, title_ids: List[int]):
+        res=await self.attach_titles_uc.execute(user_id, project_id, title_ids)
+        return res
 
     async def create_tag(self, data: TagCreate):
         saved_tag = await self.create_tag_uc.execute(data.name)

@@ -97,14 +97,52 @@ class AiService(AiServiceInterface):
             raise Exception(f"Failed to get response from Gemini: {str(e)}")
 
 
-    async def generate_professional_summary(self, profile_data: Dict) -> Any:
+    async def generate_resume(self, profile_data: Dict) -> Any:
 
         print(profile_data)
-        prompt=f"""You Are Ai Assistant and help users to build their resume.
-          Generate a professional summary that does not exceed 4-5 lines based on user profile data. and on a given title if exist. 
-          The summary should be concise, impactful, and tailored to the user's experience and skills. 
-          Since User does not directly engage just one version not A or B.
-          And also there is skills so take relevent skills to the title.
-          output format is python dictionary with one key "professional_summary" and the value is the summary. and the output of skills is  as given
-          Use the following profile data to create the summary: {profile_data}"""
+        prompt = f"""
+            You are a professional AI Resume Builder. 
+            Your task is to generate a **high-quality, tailored, professional resume** based on the user's profile data.
+            Return the output strictly as a Python dictionary with the following structure and keys: 
+
+            1. "professional_summary": 
+                - Max 3-4 impactful lines.
+                - Tailored to the user's experience, skills, and headline.
+                - Aligned with the user's target role/title.
+                - Do NOT generate multiple versions (only one summary).
+                
+            2. "professional_experience": 
+                - Take **relevant experiences** aligned to the target role/title.
+                - Value should be a **list** of experience entries.
+                - Each entry must include: **Job Title | Company | Dates**.
+                - Use **bullet points** for responsibilities and achievements.
+                - Start each bullet with **strong action verbs**.
+                - Highlight **achievements, results, or measurable impact**.
+                - Keep content **concise, clear, and professional**.
+
+            3. "projects": 
+                - Include **relevant projects** aligned to the target role/title.
+                - Value should be a **list** of project entries.
+                - Each entry must include: **Project Name | Role | Dates (if applicable)**.
+                - Include **technologies/tools** used.
+                - Use **3-5 concise bullet points** per project describing role, key features, and outcomes.
+                - Start bullets with **strong action verbs**.
+                - Highlight **results, metrics, or measurable impact**.
+                - Keep content **clear, professional, and tailored to a technical resume**.
+
+            4. "skills": 
+                - Include **relevant skills** aligned to the target role/title.
+                - Value should be a **list of skills**.
+                - Skills should come **only from experiences, projects, or user-provided skills**.
+                - Do not include unrelated skills or placeholders.
+
+            **Important Instructions:**
+            - Prioritize **clarity, readability, and impact** for a professional resume.
+            - Use a **consistent style** for dates, bullet points, and formatting.
+            - Do not hallucinate data; only use info from the profile_data provided.
+            - Output must be a valid Python dictionary, ready to use.
+
+            Here is the user's profile data:
+            {profile_data}
+            """
         return await self.send_message(prompt)

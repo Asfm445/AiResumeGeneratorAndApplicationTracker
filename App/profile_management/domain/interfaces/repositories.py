@@ -42,6 +42,10 @@ class ProjectRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_project_by_title_name(self,user_id, title_name: str) -> Optional[List[Project]]:
+        pass
+
+    @abstractmethod
     async def attach_tags(self, project_id: int, tags: List[str]):
         pass
 
