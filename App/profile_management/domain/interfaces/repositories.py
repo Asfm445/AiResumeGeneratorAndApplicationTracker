@@ -24,6 +24,10 @@ class TitleRepository(ABC):
     async def get_by_id(self, title_id: int) -> Optional[Title]:
         pass
 
+    @abstractmethod
+    async def update(self, title: Title) -> Optional[Title]:
+        pass
+
 class ProjectRepository(ABC):
     @abstractmethod
     async def create(self, project: Project) -> Project:
@@ -55,6 +59,10 @@ class ProjectRepository(ABC):
 
     @abstractmethod
     async def get_embeddings(self, project_id: int) -> List[ProjectEmbedding]:
+        pass
+
+    @abstractmethod
+    async def filter_projects_by_embedding(self, user_id: str, embedding: List[float], limit: int = 5) -> List[Project]:
         pass
 
 class TagRepository(ABC):

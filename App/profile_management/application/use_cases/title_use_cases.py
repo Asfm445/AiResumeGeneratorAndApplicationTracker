@@ -1,7 +1,7 @@
 from App.profile_management.domain.entities.models import Title
 from App.profile_management.domain.interfaces.repositories import TitleRepository
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 class CreateTitleUseCase:
     def __init__(self, title_repo: TitleRepository):
@@ -22,3 +22,21 @@ class ListTitlesUseCase:
 
     async def execute(self, user_id: str) -> List[Title]:
         return await self.title_repo.get_all(user_id)
+
+class UpdateTitleUseCase:
+    def __init__(self, title_repo: TitleRepository):
+        self.title_repo = title_repo
+        
+    async def execute(self, title_id: int, user_id: str, title_name: Optional[str] = None, priority: Optional[int] = None, description: Optional[str] = None) -> Optional[Title]:
+        db_title = await self.title_repo.get_by_id(title_id)
+        if not db_title or db_title.user_id != user_id:
+            return None
+            
+        if title_name is not None:
+            db_title.title_name = title_name
+        if priority is not None:
+            db_title.priority = priority
+        if description is not None:
+            db_title.description = description
+            
+        return await self.title_repo.update(db_title)

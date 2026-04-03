@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository
 from App.profile_management.application.use_cases.profile_use_cases import CreateOrUpdateProfileUseCase, GetProfileUseCase
-from App.profile_management.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase
+from App.profile_management.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase, UpdateTitleUseCase
 from App.profile_management.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase, CreateProjectDescriptionUseCase, ListProjectsUseCase
 from App.profile_management.application.use_cases.tag_use_cases import CreateTagUseCase, ListTagsUseCase
 from App.profile_management.application.use_cases.experience_use_cases import CreateExprianceUseCase, UpdateExprianceUseCase, ListExpriancesUseCase, GetExprianceUseCase, DeleteExprianceUseCase
@@ -78,6 +78,11 @@ class TitleCreate(BaseModel):
     name: str 
     priority: int = 1
 
+class TitleUpdate(BaseModel):
+    name: Optional[str] = None
+    priority: Optional[int] = None
+    description: Optional[str] = None
+
 class TitleResponse(BaseModel):
     id: str
     name: str
@@ -127,6 +132,7 @@ class ProfileController:
         self.get_profile_uc = GetProfileUseCase(profile_repo)
         self.create_title_uc = CreateTitleUseCase(title_repo)
         self.list_titles_uc = ListTitlesUseCase(title_repo)
+        self.update_title_uc = UpdateTitleUseCase(title_repo)
         self.create_project_uc = CreateProjectUseCase(project_repo)
         self.create_description_uc = CreateProjectDescriptionUseCase(project_repo)
         self.attach_titles_uc = AttachTitleToProjectUseCase(project_repo)
@@ -195,6 +201,22 @@ class ProfileController:
                 priority=t.priority
             ) for t in titles
         ]
+
+    async def update_title(self, title_id: int, user_id: str, data: TitleUpdate):
+        updated_title = await self.update_title_uc.execute(
+            title_id=title_id, 
+            user_id=user_id, 
+            title_name=data.name, 
+            priority=data.priority, 
+            description=data.description
+        )
+        if not updated_title:
+             return None
+        return TitleResponse(
+            id=str(updated_title.id),
+            name=updated_title.title_name,
+            priority=updated_title.priority
+        )
 
     async def create_project(self, user_id: str, data: ProjectCreate):
         saved_project = await self.create_project_uc.execute(

@@ -1,9 +1,9 @@
 import os
 import json
 import google.generativeai as genai
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from App.resume_genetor.domain.interfaces.ai_service_interface import AiServiceInterface
-
+from App.resume_genetor.domain.models.model import TitleForAi
 
 class AiService(AiServiceInterface):
     def __init__(self, api_key: Optional[str] = None):
@@ -100,7 +100,7 @@ class AiService(AiServiceInterface):
     async def generate_resume(self, profile_data: Dict) -> Any:
 
         print(profile_data)
-        prompt = f"""
+        prompt = """
             You are a professional AI Resume Builder. 
             Your task is to generate a **high-quality, tailored, professional resume** based on the user's profile data.
             Return the output strictly as a Python dictionary with the following structure and keys: 
@@ -110,6 +110,7 @@ class AiService(AiServiceInterface):
                 - Tailored to the user's experience, skills, and headline.
                 - Aligned with the user's target role/title.
                 - Do NOT generate multiple versions (only one summary).
+                - Don't use exagragrating words like passionate, Highly motivated, etc.
                 
             2. "professional_experience": 
                 - Take **relevant experiences** aligned to the target role/title.
@@ -131,8 +132,8 @@ class AiService(AiServiceInterface):
                 - Keep content **clear, professional, and tailored to a technical resume**.
 
             4. "skills": 
-                - Include **relevant skills** aligned to the target role/title.
-                - Value should be a **list of skills**.
+                - Include **relevant skills** aligned to the target role/title
+                - skills should be disctionary with key skill type eg. programming language etc and value should be list of skills
                 - Skills should come **only from experiences, projects, or user-provided skills**.
                 - Do not include unrelated skills or placeholders.
 
@@ -146,3 +147,18 @@ class AiService(AiServiceInterface):
             {profile_data}
             """
         return await self.send_message(prompt)
+
+
+    async def generate_tags(self, user_id: str, title: TitleForAi) -> List[str]:
+        prompt = f"""
+            You are a professional AI Resume Builder. 
+            Your task is to generate a list of relevant tags based on the user's  title and titles description.
+            Return the output as string of comma separated tags.
+            
+            Here is the user's title and description:
+            {title.title_name}
+            {title.description}
+            """
+        result = await self.send_message(prompt)
+        return result.split(",")
+            

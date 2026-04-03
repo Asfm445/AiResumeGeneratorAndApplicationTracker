@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
+from typing import Optional, Dict, List
+from App.resume_genetor.domain.models.model import TitleForAi
 
 
 class AiServiceInterface(ABC):
@@ -25,3 +26,8 @@ class AiServiceInterface(ABC):
     @abstractmethod
     async def generate_resume(self, profile_data: Dict) -> str:
         pass
+
+    @abstractmethod
+    async def generate_tags(self, user_id: str, title: TitleForAi) -> List[str]:
+        pass
+        

@@ -97,6 +97,20 @@ class SqlAlchemyTitleRepository(TitleRepository):
              return self._to_domain(db_title)
         return None
 
+    async def update(self, title: Title) -> Optional[Title]:
+        stmt = select(DBTitle).filter_by(id=title.id, user_id=title.user_id)
+        result = await self.session.execute(stmt)
+        db_title = result.scalars().first()
+        
+        if db_title:
+            db_title.title_name = title.title_name
+            db_title.description = title.description
+            db_title.priority = title.priority
+            await self.session.commit()
+            await self.session.refresh(db_title)
+            return self._to_domain(db_title)
+        return None
+
     def _to_domain(self, db_title: DBTitle) -> Title:
         return Title(
             id=db_title.id,
@@ -248,6 +262,21 @@ class SqlAlchemyProjectRepository(ProjectRepository):
                 created_at=e.created_at
             ) for e in db_embs
         ]
+
+    async def filter_projects_by_embedding(self, user_id: str, embedding: List[float], limit: int = 5) -> List[Project]:
+        # Join with DBProjectEmbedding and order by cosine distance (most similar first)
+        stmt = (
+            select(DBProject)
+            .join(DBProjectEmbedding, DBProject.id == DBProjectEmbedding.project_id)
+            .filter(DBProject.user_id == user_id)
+            .order_by(DBProjectEmbedding.embedding.cosine_distance(embedding))
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        # Use .unique() since a project might have multiple embeddings and could appear multiple times
+        db_projects = result.scalars().unique().all()
+        return [self._to_domain(p) for p in db_projects]
+    
 
     def _to_domain(self, db_project: DBProject) -> Project:
         return Project(

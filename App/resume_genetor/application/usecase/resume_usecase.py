@@ -1,7 +1,8 @@
 from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, SkillRepository, ProjectRepository, ExprianceRepository
 from App.profile_management.domain.entities.models import UserProfile
 from App.resume_genetor.domain.interfaces.ai_service_interface import AiServiceInterface
-
+from App.resume_genetor.domain.models.model import TitleForAi
+from App.resume_genetor.domain.interfaces.embeding_service import EmbeddingService
 
 
 class ResumeUseCase:
@@ -10,7 +11,8 @@ class ResumeUseCase:
                  title_repo: TitleRepository, 
                  skill_repo: SkillRepository,
                  project_repo: ProjectRepository,
-                 expriance_repo: ExprianceRepository
+                 expriance_repo: ExprianceRepository,
+                 embedding_service: EmbeddingService
                  ):
         self.profile_repo = profile_repo
         self.ai_service = ai_service
@@ -18,6 +20,7 @@ class ResumeUseCase:
         self.skill_repo = skill_repo
         self.project_repo = project_repo
         self.expriance_repo = expriance_repo
+        self.embedding_service = embedding_service
 
     async def generate_resume(self, user_id: str) -> str:
         # Fetch user profile and related data
@@ -27,8 +30,13 @@ class ResumeUseCase:
         titles= await self.title_repo.get_all(user_id)
         skills= await self.skill_repo.get_all(user_id)
 
+
+
         titles.sort(key= lambda t: t.priority, reverse=True)
-        projects = await self.project_repo.get_project_by_title_name(user_id, titles[0].title_name)
+
+        emb= await self.embedding_service.embade_text(titles[0].description)
+
+        projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 5)
         expriances= await self.expriance_repo.get_all(user_id)
 
 
@@ -48,4 +56,19 @@ class ResumeUseCase:
 
         resume = await self.ai_service.generate_resume(data)
         return resume
+
+    async def generate_tags(self, user_id: str) -> str:
+        titles= await self.title_repo.get_all(user_id)
+        titles.sort(key= lambda t: t.priority, reverse=True)
+        title = TitleForAi(title_name=titles[0].title_name, description=titles[0].description)
+        
+
+        tags = await self.ai_service.generate_tags(user_id, title)
+
+        return tags
+        
+
+
+
+        
 
