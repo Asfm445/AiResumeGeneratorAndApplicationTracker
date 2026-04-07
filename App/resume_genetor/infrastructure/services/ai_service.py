@@ -6,12 +6,13 @@ from App.resume_genetor.domain.interfaces.ai_service_interface import AiServiceI
 from App.resume_genetor.domain.models.model import TitleForAi
 
 class AiService(AiServiceInterface):
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, temperature: float = 0.3):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
 
         genai.configure(api_key=self.api_key)
+        self.generation_config = genai.types.GenerationConfig(temperature=temperature)
         self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     def _strip_code_block_and_whitespace(self, text: str) -> str:
@@ -54,7 +55,7 @@ class AiService(AiServiceInterface):
     async def send_message(self, message: str) -> Any:
         """Send a message to Gemini and return a dict if possible, else raw text."""
         try:
-            response = self.model.generate_content(message)
+            response = self.model.generate_content(message, generation_config=self.generation_config)
             text = self._strip_code_block_and_whitespace(response.text)
 
             # If the model returns context + chunk + JSON, try to extract JSON substring
@@ -100,7 +101,7 @@ class AiService(AiServiceInterface):
     async def generate_resume(self, profile_data: Dict) -> Any:
 
         print(profile_data)
-        prompt = """
+        prompt = f"""
             You are a professional AI Resume Builder. 
             Your task is to generate a **high-quality, tailored, professional resume** based on the user's profile data.
             Return the output strictly as a Python dictionary with the following structure and keys: 
@@ -132,10 +133,11 @@ class AiService(AiServiceInterface):
                 - Keep content **clear, professional, and tailored to a technical resume**.
 
             4. "skills": 
-                - Include **relevant skills** aligned to the target role/title
+                - Include only **relevant skills** aligned to the target role/title
                 - skills should be disctionary with key skill type eg. programming language etc and value should be list of skills
                 - Skills should come **only from experiences, projects, or user-provided skills**.
                 - Do not include unrelated skills or placeholders.
+                - never invent new skill
 
             **Important Instructions:**
             - Prioritize **clarity, readability, and impact** for a professional resume.

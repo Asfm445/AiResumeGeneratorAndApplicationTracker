@@ -75,8 +75,9 @@ class ProfileResponse(BaseModel):
     titles: Optional[List[dict]] = None
 
 class TitleCreate(BaseModel):
-    name: str 
+    name: str
     priority: int = 1
+    description: Optional[str] = None
 
 class TitleUpdate(BaseModel):
     name: Optional[str] = None
@@ -87,6 +88,7 @@ class TitleResponse(BaseModel):
     id: str
     name: str
     priority: int
+    description: Optional[str] = None
 
 class ProjectCreate(BaseModel):
     name: str
@@ -185,11 +187,12 @@ class ProfileController:
         )
 
     async def create_title(self, user_id: str, data: TitleCreate):
-        saved_title = await self.create_title_uc.execute(user_id, data.name, data.priority)
+        saved_title = await self.create_title_uc.execute(user_id, data.name, data.priority, data.description)
         return TitleResponse(
             id=str(saved_title.id),
             name=saved_title.title_name,
-            priority=saved_title.priority
+            priority=saved_title.priority,
+            description=saved_title.description
         )
 
     async def list_titles(self, user_id: str):
@@ -198,7 +201,8 @@ class ProfileController:
             TitleResponse(
                 id=str(t.id),
                 name=t.title_name,
-                priority=t.priority
+                priority=t.priority,
+                description=t.description
             ) for t in titles
         ]
 
@@ -215,7 +219,8 @@ class ProfileController:
         return TitleResponse(
             id=str(updated_title.id),
             name=updated_title.title_name,
-            priority=updated_title.priority
+            priority=updated_title.priority,
+            description=updated_title.description
         )
 
     async def create_project(self, user_id: str, data: ProjectCreate):

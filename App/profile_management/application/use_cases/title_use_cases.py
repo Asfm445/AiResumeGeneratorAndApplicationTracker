@@ -7,11 +7,12 @@ class CreateTitleUseCase:
     def __init__(self, title_repo: TitleRepository):
         self.title_repo = title_repo
     
-    async def execute(self, user_id: str, name: str, priority: int) -> Title:
+    async def execute(self, user_id: str, name: str, priority: int, description: Optional[str] = None) -> Title:
         title = Title(
             title_name=name,
             user_id=user_id,
             priority=priority,
+            description=description,
             created_at=datetime.utcnow()
         )
         return await self.title_repo.create(title)

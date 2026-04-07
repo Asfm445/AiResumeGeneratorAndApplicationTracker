@@ -36,7 +36,11 @@ class ResumeUseCase:
 
         emb= await self.embedding_service.embade_text(titles[0].description)
 
-        projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 5)
+        projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 1)
+        print("+++++++++++++++++++++++++++++++++++++filtered projects+++++++++++++++++++++++++++++")
+        print([project.name  for project in projects])
+        print("+++++++++++++++++++++++++++++++++++++filtered projects+++++++++++++++++++++++++++++")
+
         expriances= await self.expriance_repo.get_all(user_id)
 
 
@@ -53,6 +57,8 @@ class ResumeUseCase:
 
         if titles:
             data["title"]= titles[0].title_name
+
+        
 
         resume = await self.ai_service.generate_resume(data)
         return resume

@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
+from sqlalchemy import select, text, func
 from sqlalchemy.orm import selectinload
 from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill
 from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository
@@ -74,6 +74,7 @@ class SqlAlchemyTitleRepository(TitleRepository):
         db_title = DBTitle(
             user_id=title.user_id,
             title_name=title.title_name,
+            description=title.description,
             priority=title.priority,
             created_at=datetime.utcnow()
         )
@@ -101,15 +102,29 @@ class SqlAlchemyTitleRepository(TitleRepository):
         stmt = select(DBTitle).filter_by(id=title.id, user_id=title.user_id)
         result = await self.session.execute(stmt)
         db_title = result.scalars().first()
-        
-        if db_title:
-            db_title.title_name = title.title_name
-            db_title.description = title.description
-            db_title.priority = title.priority
-            await self.session.commit()
-            await self.session.refresh(db_title)
-            return self._to_domain(db_title)
-        return None
+
+        if not db_title:
+            return None
+
+        # Check for duplicate title_name for the same user (excluding this record)
+        conflict_stmt = (
+            select(DBTitle)
+            .filter(
+                DBTitle.user_id == title.user_id,
+                DBTitle.title_name == title.title_name,
+                DBTitle.id != title.id
+            )
+        )
+        conflict_result = await self.session.execute(conflict_stmt)
+        if conflict_result.scalars().first():
+            raise ValueError(f"A title named '{title.title_name}' already exists for this user.")
+
+        db_title.title_name = title.title_name
+        db_title.description = title.description
+        db_title.priority = title.priority
+        await self.session.commit()
+        await self.session.refresh(db_title)
+        return self._to_domain(db_title)
 
     def _to_domain(self, db_title: DBTitle) -> Title:
         return Title(
@@ -264,17 +279,22 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         ]
 
     async def filter_projects_by_embedding(self, user_id: str, embedding: List[float], limit: int = 5) -> List[Project]:
-        # Join with DBProjectEmbedding and order by cosine distance (most similar first)
+        # Group by project and rank by the AVERAGE cosine distance across ALL embeddings
+        # (overview + features + tech_stack), so relevance is measured holistically.
+        avg_distance = func.avg(
+            DBProjectEmbedding.embedding.cosine_distance(embedding)
+        ).label("avg_distance")
+
         stmt = (
-            select(DBProject)
+            select(DBProject, avg_distance)
             .join(DBProjectEmbedding, DBProject.id == DBProjectEmbedding.project_id)
             .filter(DBProject.user_id == user_id)
-            .order_by(DBProjectEmbedding.embedding.cosine_distance(embedding))
+            .group_by(DBProject.id)
+            .order_by(avg_distance)
             .limit(limit)
         )
         result = await self.session.execute(stmt)
-        # Use .unique() since a project might have multiple embeddings and could appear multiple times
-        db_projects = result.scalars().unique().all()
+        db_projects = [row[0] for row in result.all()]
         return [self._to_domain(p) for p in db_projects]
     
 
