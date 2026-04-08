@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text, func
+from sqlalchemy import select, text, func, update
 from sqlalchemy.orm import selectinload
 from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill
 from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository
@@ -125,6 +125,15 @@ class SqlAlchemyTitleRepository(TitleRepository):
         await self.session.commit()
         await self.session.refresh(db_title)
         return self._to_domain(db_title)
+    async def get_title_embading_by_title_id(self,title_id: int):
+        stmt = select(DBTitle.description_embedding).filter_by(id=title_id)
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+        
+    async def save_embedding(self, title_id: int, embedding: List[float]) -> None:
+        stmt = update(DBTitle).where(DBTitle.id == title_id).values(description_embedding=embedding)
+        await self.session.execute(stmt)
+        await self.session.commit()
 
     def _to_domain(self, db_title: DBTitle) -> Title:
         return Title(

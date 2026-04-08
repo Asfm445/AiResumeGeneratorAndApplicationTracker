@@ -34,7 +34,10 @@ class ResumeUseCase:
 
         titles.sort(key= lambda t: t.priority, reverse=True)
 
-        emb= await self.embedding_service.embade_text(titles[0].description)
+        emb = await self.title_repo.get_title_embading_by_title_id(titles[0].id)
+        if emb is None:
+            emb = await self.embedding_service.embed_text(titles[0].description)
+            await self.title_repo.save_embedding(titles[0].id, emb)
 
         projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 1)
         print("+++++++++++++++++++++++++++++++++++++filtered projects+++++++++++++++++++++++++++++")

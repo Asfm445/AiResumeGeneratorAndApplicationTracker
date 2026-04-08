@@ -1,4 +1,4 @@
-sentence-transformers
+google-generativeai
 sqlalchemy
 psycopg[binary]
 pgvector

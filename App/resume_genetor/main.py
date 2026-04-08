@@ -2,7 +2,7 @@ from App.resume_genetor.application.usecase.resume_usecase import ResumeUseCase
 from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository
 from App.profile_management.infrastructure.database.database import get_db
 from App.resume_genetor.infrastructure.services.ai_service import AiService
-from App.resume_genetor.infrastructure.services.embedding_service import LocalEmbeddingService
+from App.resume_genetor.infrastructure.services.embedding_service import GeminiEmbeddingService
 import os
 import jwt
 from dotenv import load_dotenv
@@ -32,7 +32,7 @@ async def test_generate_resume():
         ai_service = AiService()
         expriance_repo = SqlAlchemyExprianceRepository(db)
         project_repo = SqlAlchemyProjectRepository(db)
-        embedding_service = LocalEmbeddingService()
+        embedding_service = GeminiEmbeddingService()
         
         # Create use case
         resume_use_case = ResumeUseCase(profile_repo=repo, ai_service=ai_service, title_repo=title_repo, skill_repo=skill_repo, expriance_repo=expriance_repo, project_repo=project_repo, embedding_service=embedding_service)

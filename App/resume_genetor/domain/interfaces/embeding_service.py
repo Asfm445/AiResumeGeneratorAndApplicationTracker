@@ -5,6 +5,6 @@ from typing import List
 class EmbeddingService(ABC):
     
     @abstractmethod
-    async def embade_text(self, text: str) -> List[float]:
+    async def embed_text(self, text: str) -> List[float]:
         pass
         

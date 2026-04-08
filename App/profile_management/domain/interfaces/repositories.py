@@ -28,6 +28,14 @@ class TitleRepository(ABC):
     async def update(self, title: Title) -> Optional[Title]:
         pass
 
+    @abstractmethod
+    async def get_title_embading_by_title_id(self,title_id: int):
+        pass
+
+    @abstractmethod
+    async def save_embedding(self, title_id: int, embedding: List[float]) -> None:
+        pass
+
 class ProjectRepository(ABC):
     @abstractmethod
     async def create(self, project: Project) -> Project:

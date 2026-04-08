@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from sentence_transformers import SentenceTransformer
+import google.generativeai as genai
 from sqlalchemy import create_engine, select, update, MetaData, Table, Column, Integer, Text
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import sessionmaker
@@ -23,9 +23,13 @@ logging.basicConfig(
 logger = logging.getLogger("embedding-worker")
 
 def run_worker():
-    logger.info("Initializing worker... loading model 'all-MiniLM-L6-v2'")
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    logger.info("Model loaded successfully.")
+    logger.info("Initializing worker... getting Gemini API key")
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        logger.error("GEMINI_API_KEY environment variable is missing")
+        return
+    genai.configure(api_key=api_key)
+    logger.info("Gemini API configured successfully.")
 
     engine = create_engine(DATABASE_URL)
     Session = sessionmaker(bind=engine)
@@ -45,6 +49,13 @@ def run_worker():
         Column('description_embedding', Vector(384))
     )
 
+    titles = Table(
+        'titles', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('description', Text),
+        Column('description_embedding', Vector(384))
+    )
+
     logger.info("Worker started. Polling for records without embeddings...")
 
     while True:
@@ -60,7 +71,12 @@ def run_worker():
                         logger.info(f"Processing project record ID: {row.id} (Text length: {len(row.raw_text)})")
                         
                         # Generate embedding
-                        embedding_vector = model.encode(row.raw_text).tolist()
+                        result = genai.embed_content(
+                            model="models/embedding-001",
+                            content=row.raw_text,
+                            task_type="SEMANTIC_SIMILARITY"
+                        )
+                        embedding_vector = result["embedding"][:384]
                         
                         # Update DB
                         update_stmt = update(project_embeddings).where(project_embeddings.c.id == row.id).values(embedding=embedding_vector)
@@ -78,7 +94,12 @@ def run_worker():
                         logger.info(f"Processing experience record ID: {row.id} (Text length: {len(row.short_description)})")
                         
                         # Generate embedding
-                        embedding_vector = model.encode(row.short_description).tolist()
+                        result = genai.embed_content(
+                            model="models/embedding-001",
+                            content=row.short_description,
+                            task_type="SEMANTIC_SIMILARITY"
+                        )
+                        embedding_vector = result["embedding"][:384]
                         
                         # Update DB
                         update_stmt = update(experiences).where(experiences.c.id == row.id).values(description_embedding=embedding_vector)
@@ -86,7 +107,30 @@ def run_worker():
                         session.commit()
                         logger.info(f"Successfully updated experience embedding for record ID: {row.id}")
                 
-                if not result and not exp_result:
+                # Process title embeddings
+                title_stmt = select(titles).where((titles.c.description_embedding == None) & (titles.c.description != None))
+                title_result = session.execute(title_stmt).all()
+                
+                if title_result:
+                    logger.info(f"Found {len(title_result)} title records to process.")
+                    for row in title_result:
+                        logger.info(f"Processing title record ID: {row.id} (Text length: {len(row.description)})")
+                        
+                        # Generate embedding
+                        result_embed = genai.embed_content(
+                            model="models/embedding-001",
+                            content=row.description,
+                            task_type="SEMANTIC_SIMILARITY"
+                        )
+                        embedding_vector = result_embed["embedding"][:384]
+                        
+                        # Update DB
+                        update_stmt = update(titles).where(titles.c.id == row.id).values(description_embedding=embedding_vector)
+                        session.execute(update_stmt)
+                        session.commit()
+                        logger.info(f"Successfully updated title embedding for record ID: {row.id}")
+                
+                if not result and not exp_result and not title_result:
                     # Silent poll
                     pass
             

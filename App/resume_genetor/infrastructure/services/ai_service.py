@@ -12,7 +12,10 @@ class AiService(AiServiceInterface):
             raise ValueError("GEMINI_API_KEY environment variable is required")
 
         genai.configure(api_key=self.api_key)
-        self.generation_config = genai.types.GenerationConfig(temperature=temperature)
+        self.generation_config = genai.types.GenerationConfig(
+            temperature=temperature,
+            response_mime_type="application/json"
+        )
         self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     def _strip_code_block_and_whitespace(self, text: str) -> str:
@@ -53,47 +56,12 @@ class AiService(AiServiceInterface):
         return text
 
     async def send_message(self, message: str) -> Any:
-        """Send a message to Gemini and return a dict if possible, else raw text."""
+        """Send a message to Gemini and return a parsed dict."""
         try:
             response = self.model.generate_content(message, generation_config=self.generation_config)
-            text = self._strip_code_block_and_whitespace(response.text)
-
-            # If the model returns context + chunk + JSON, try to extract JSON substring
-            candidate_text = self._extract_json(text)
-
-            # Try strict JSON first
-            for attempt in [candidate_text, text]:
-                try:
-                    return json.loads(attempt)
-                except json.JSONDecodeError:
-                    pass
-
-            # Try json with single quote normalization to handle python-style dicts
-            for attempt in [candidate_text, text]:
-                normalized_text = self._normalize_keys(attempt)
-                try:
-                    return json.loads(normalized_text)
-                except json.JSONDecodeError:
-                    pass
-
-            # Finally fallback to Python literal eval for dict-like objects
-            try:
-                import ast
-                evaluated = ast.literal_eval(candidate_text)
-                if isinstance(evaluated, dict):
-                    return evaluated
-            except Exception:
-                pass
-
-            try:
-                import ast
-                evaluated = ast.literal_eval(text)
-                if isinstance(evaluated, dict):
-                    return evaluated
-            except Exception:
-                pass
-
-            return text
+            return json.loads(response.text)
+        except json.JSONDecodeError as e:
+            raise Exception(f"Gemini returned invalid JSON: {e}\nRaw: {response.text[:200]}")
         except Exception as e:
             raise Exception(f"Failed to get response from Gemini: {str(e)}")
 

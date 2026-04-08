@@ -31,6 +31,7 @@ class Title(Base):
 
     title_name = Column(String(255), nullable=False)
     description = Column(Text)
+    description_embedding = Column(Vector(384), nullable=True)
     priority = Column(Integer, default=0)
 
     created_at = Column(DateTime, nullable=False)
