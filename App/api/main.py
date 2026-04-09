@@ -1,5 +1,7 @@
 from fastapi import FastAPI
-from App.api.profile_management.routes import route
+from App.api.profile_management.routes import route as profile_route
+from App.api.resume_genetor.routes import route as resume_route
+from App.api import auth_controller
 from App.profile_management.infrastructure.database.database import engine, Base
 import uvicorn
 
@@ -7,7 +9,9 @@ import uvicorn
 
 app = FastAPI(title="Profile Service", version="1.0.0")
 
-app.include_router(route.router)
+app.include_router(profile_route.router)
+app.include_router(resume_route.router)
+app.include_router(auth_controller.router)
 
 if __name__ == "__main__":
     uvicorn.run("App.api.main:app", host="0.0.0.0", port=8000, reload=True)

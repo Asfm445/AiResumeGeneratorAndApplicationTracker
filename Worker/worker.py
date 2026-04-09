@@ -72,7 +72,7 @@ def run_worker():
                         
                         # Generate embedding
                         result = genai.embed_content(
-                            model="models/embedding-001",
+                            model="models/gemini-embedding-001",
                             content=row.raw_text,
                             task_type="SEMANTIC_SIMILARITY"
                         )

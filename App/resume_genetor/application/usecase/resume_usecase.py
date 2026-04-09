@@ -39,7 +39,7 @@ class ResumeUseCase:
             emb = await self.embedding_service.embed_text(titles[0].description)
             await self.title_repo.save_embedding(titles[0].id, emb)
 
-        projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 1)
+        projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 2)
         print("+++++++++++++++++++++++++++++++++++++filtered projects+++++++++++++++++++++++++++++")
         print([project.name  for project in projects])
         print("+++++++++++++++++++++++++++++++++++++filtered projects+++++++++++++++++++++++++++++")

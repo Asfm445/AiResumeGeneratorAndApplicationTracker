@@ -16,7 +16,7 @@ class AiService(AiServiceInterface):
             temperature=temperature,
             response_mime_type="application/json"
         )
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('gemini-3-flash-preview')
 
     def _strip_code_block_and_whitespace(self, text: str) -> str:
         """Strip markdown code fences, leading/trailing whitespace, and language hints."""
@@ -68,7 +68,12 @@ class AiService(AiServiceInterface):
 
     async def generate_resume(self, profile_data: Dict) -> Any:
 
-        print(profile_data)
+        print("+++++++++++++++++++++++++++++++++++++++++api key+++++++++++++++++")
+        print(self.api_key)
+        print(self.model)
+        print("+++++++++++++++++++++++++++++++++++++++++api key+++++++++++++++++")
+
+        # print(profile_data)
         prompt = f"""
             You are a professional AI Resume Builder. 
             Your task is to generate a **high-quality, tailored, professional resume** based on the user's profile data.

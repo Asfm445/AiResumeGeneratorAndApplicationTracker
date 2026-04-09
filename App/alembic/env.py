@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 from App.profile_management.infrastructure.database.database import Base
 import App.profile_management.infrastructure.database.schema  # noqa: F401
+import App.auth.infrastructure.database.schema  # noqa: F401
 
 load_dotenv()
 
