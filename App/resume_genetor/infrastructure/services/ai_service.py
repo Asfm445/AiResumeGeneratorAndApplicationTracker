@@ -70,8 +70,14 @@ class AiService(AiServiceInterface):
         prompt = f"""
             You are a professional AI Resume Builder. 
             Generate a high-quality **professional summary** (max 3-4 impactful lines).
-            Tailored to: {profile_data.get('headline', '')} and target title: {profile_data.get('title', '')}.
-            Use bio: {profile_data.get('bio', '')}.
+            Target Role: {profile_data.get('title', '')}
+            Target Role Description: {profile_data.get('title_description', '')}
+            User Headline: {profile_data.get('headline', '')}
+            User Bio: {profile_data.get('bio', '')}
+            
+            CRITICAL INSTRUCTION: Align the summary strictly with the Target Role. 
+            If the target is a Backend role but the bio mentions Frontend, emphasize architectural, 
+            data-handling, or logic-heavy aspects that translate to the backend.
             Don't use exaggerating words like 'passionate' or 'highly motivated'.
             
             Return JSON in this format:
@@ -82,9 +88,15 @@ class AiService(AiServiceInterface):
         result = await self.send_message(prompt)
         return result.get("summary", "")
 
-    async def generate_experience(self, experience_data: List[Dict], target_title: str) -> List[Dict]:
+    async def generate_experience(self, experience_data: List[Dict], target_title: str, target_description: Optional[str] = None) -> List[Dict]:
         prompt = f"""
-            Refine the following professional experiences to align with the target role: {target_title}.
+            Refine the following professional experiences to align with the Target Role: {target_title}.
+            Target Role Description: {target_description or "N/A"}
+            
+            CRITICAL INSTRUCTION: Your goal is to make the experience highly relevant to the Target Role.
+            If the target is '{target_title}' but the experience was in a different area (e.g., target is Backend but job was Frontend), 
+            focus on integration, performance, logic, and any crossover skills (APIs, data processing, architecture).
+            
             Use strong action verbs and highlight results/impact.
             Return a list of experiences where each experience matches this JSON format:
             {{
@@ -106,9 +118,15 @@ class AiService(AiServiceInterface):
             return result["experiences"]
         return result if isinstance(result, list) else []
 
-    async def generate_projects(self, project_data: List[Dict], target_title: str) -> List[Dict]:
+    async def generate_projects(self, project_data: List[Dict], target_title: str, target_description: Optional[str] = None) -> List[Dict]:
         prompt = f"""
-            Refine the following projects for the target role: {target_title}.
+            Refine the following projects for the Target Role: {target_title}.
+            Target Role Description: {target_description or "N/A"}
+            
+            CRITICAL INSTRUCTION: Rephrase project descriptions to highlight skills relevant to the Target Role.
+            For example, if the target is Backend but the project is a React app, emphasize the state management logic, 
+            API consumption, performance optimizations, or any architectural decisions rather than just UI/UX.
+            
             Highlight role, tech stack, and outcomes.
             Return a list of projects where each project matches this JSON format:
             {{
@@ -131,11 +149,16 @@ class AiService(AiServiceInterface):
             return result["projects"]
         return result if isinstance(result, list) else []
 
-    async def generate_skills(self, skill_data: List[Dict], target_title: str) -> Dict[str, List[str]]:
+    async def generate_skills(self, skill_data: List[Dict], target_title: str, target_description: Optional[str] = None) -> Dict[str, List[str]]:
         prompt = f"""
-            Categorize and refine these skills for a {target_title} resume: {skill_data}.
+            Categorize and refine these skills for a {target_title} resume.
+            Target Role Description: {target_description or "N/A"}
+            
+            Skills provided: {skill_data}
+            
             Return a JSON dictionary where keys are skill categories and values are lists of skills.
             Example: {{"Programming Languages": ["Python", "JS"], "Tools": ["Docker"]}}
+            Prioritize categories and skills most relevant to the target role.
             Only use skills provided in the data.
             """
         result = await self.send_message(prompt)
@@ -143,13 +166,14 @@ class AiService(AiServiceInterface):
 
     async def generate_resume(self, profile_data: Dict) -> Any:
         title = profile_data.get("title", "Professional")
+        description = profile_data.get("title_description", "")
         
         # Parallel execution for independent sections
         import asyncio
         summary_task = self.generate_summary(profile_data)
-        experience_task = self.generate_experience(profile_data.get("expriances", []), title)
-        projects_task = self.generate_projects(profile_data.get("projects", []), title)
-        skills_task = self.generate_skills(profile_data.get("skills", []), title)
+        experience_task = self.generate_experience(profile_data.get("expriances", []), title, description)
+        projects_task = self.generate_projects(profile_data.get("projects", []), title, description)
+        skills_task = self.generate_skills(profile_data.get("skills", []), title, description)
         
         summary, experiences, projects, skills = await asyncio.gather(
             summary_task, experience_task, projects_task, skills_task

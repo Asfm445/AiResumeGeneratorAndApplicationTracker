@@ -3,6 +3,7 @@ from App.profile_management.domain.entities.models import UserProfile
 from App.resume_genetor.domain.interfaces.ai_service_interface import AiServiceInterface
 from App.resume_genetor.domain.models.model import TitleForAi
 from App.resume_genetor.domain.interfaces.embeding_service import EmbeddingService
+from typing import Optional
 
 
 class ResumeUseCase:
@@ -22,7 +23,7 @@ class ResumeUseCase:
         self.expriance_repo = expriance_repo
         self.embedding_service = embedding_service
 
-    async def generate_resume(self, user_id: str) -> dict:
+    async def generate_resume(self, user_id: str, title_id: Optional[int] = None) -> dict:
         # Fetch user profile and related data
         profile = await self.profile_repo.get_by_user_id(user_id)
         if not profile:
@@ -31,19 +32,29 @@ class ResumeUseCase:
         titles = await self.title_repo.get_all(user_id)
         skills = await self.skill_repo.get_all(user_id)
         
-        if not titles:
-            target_title = "Professional"
-        else:
+        target_title_obj = None
+        if title_id:
+            # Find the specific title requested
+            target_title_obj = next((t for t in titles if t.id == title_id), None)
+            if not target_title_obj:
+                raise ValueError(f"Title with ID {title_id} not found for this user")
+        elif titles:
+            # Fallback to highest priority title
             titles.sort(key=lambda t: t.priority, reverse=True)
-            target_title = titles[0].title_name
+            target_title_obj = titles[0]
 
-            emb = await self.title_repo.get_title_embading_by_title_id(titles[0].id)
+        if not target_title_obj:
+            target_title = "Professional"
+            emb = None
+        else:
+            target_title = target_title_obj.title_name
+            emb = await self.title_repo.get_title_embading_by_title_id(target_title_obj.id)
             if emb is None:
-                emb = await self.embedding_service.embed_text(titles[0].description)
-                await self.title_repo.save_embedding(titles[0].id, emb)
+                emb = await self.embedding_service.embed_text(target_title_obj.description)
+                await self.title_repo.save_embedding(target_title_obj.id, emb)
 
         # Filter projects by embedding if title exists, else get all
-        if titles:
+        if target_title_obj:
             projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 3)
         else:
             projects = await self.project_repo.get_all(user_id)
@@ -53,6 +64,7 @@ class ResumeUseCase:
         # Prepare data for AI sections
         ai_input_data = {
             "title": target_title,
+            "title_description": target_title_obj.description if target_title_obj else "",
             "headline": profile.headline,
             "bio": profile.about_text,
             "skills": [{"skill_type": s.skill_type, "skills": s.skills} for s in skills],
@@ -89,14 +101,21 @@ class ResumeUseCase:
         
         return full_resume
 
-    async def generate_tags(self, user_id: str) -> str:
-        titles= await self.title_repo.get_all(user_id)
-        titles.sort(key= lambda t: t.priority, reverse=True)
-        title = TitleForAi(title_name=titles[0].title_name, description=titles[0].description)
+    async def generate_tags(self, user_id: str, title_id: Optional[int] = None) -> str:
+        titles = await self.title_repo.get_all(user_id)
         
+        target_title_obj = None
+        if title_id:
+            target_title_obj = next((t for t in titles if t.id == title_id), None)
+        elif titles:
+            titles.sort(key=lambda t: t.priority, reverse=True)
+            target_title_obj = titles[0]
 
+        if not target_title_obj:
+            raise ValueError("No target title found to generate tags for")
+
+        title = TitleForAi(title_name=target_title_obj.title_name, description=target_title_obj.description)
         tags = await self.ai_service.generate_tags(user_id, title)
-
         return tags
         
 

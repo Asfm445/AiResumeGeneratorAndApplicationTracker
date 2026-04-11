@@ -71,3 +71,65 @@ class AuthUseCase:
 
     async def get_me(self, user_id: str) -> Optional[User]:
         return await self.user_repo.find_by_id(user_id)
+
+    async def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
+        try:
+            payload = JWTService.decode_token(refresh_token)
+            user_id = payload.get("sub")
+            if not user_id:
+                raise ValueError("Invalid refresh token: missing sub")
+        except Exception:
+            raise ValueError("Invalid refresh token")
+
+        user = await self.user_repo.find_by_id(user_id)
+        if not user:
+            raise ValueError("User not found")
+
+        import hashlib
+        hashed_rt = hashlib.sha256(refresh_token.encode('utf-8')).hexdigest()
+        
+        # Check if the token exists and is not expired
+        token_found = False
+        current_time = datetime.now(timezone.utc).replace(tzinfo=None) # naive comparison since repo uses naive
+
+        valid_tokens = []
+        for t in user.tokens:
+            if t.hashed_token == hashed_rt:
+                if t.expire_at > current_time:
+                    token_found = True
+                    valid_tokens.append(t)
+                # else: don't add to valid_tokens (this deletes the expired token later)
+            elif t.expire_at > current_time:
+                valid_tokens.append(t)
+        
+        if not token_found:
+            raise ValueError("Refresh token invalid or expired")
+
+        # Refresh Token Rotation:
+        # 1. Remove the used token (it's not in valid_tokens if we don't re-add it)
+        # 2. Generate new refresh token
+        new_refresh_token_jwt = JWTService.create_refresh_token({"sub": user.id})
+        new_hashed_rt = hashlib.sha256(new_refresh_token_jwt.encode('utf-8')).hexdigest()
+        
+        expire_at = datetime.utcnow() + timedelta(days=7)
+        new_rt = RefreshToken(
+            id=str(uuid.uuid4()),
+            hashed_token=new_hashed_rt,
+            created_at=datetime.utcnow(),
+            expire_at=expire_at,
+            device_ip=user.tokens[0].device_ip if user.tokens else ""
+        )
+        
+        valid_tokens.append(new_rt)
+        user.tokens = valid_tokens
+        await self.user_repo.update(user)
+
+        # Generate new access token
+        access_token_data = {"sub": user.id, "roles": user.roles}
+        access_token = JWTService.create_access_token(access_token_data)
+
+        return {
+            "access_token": access_token,
+            "refresh_token": new_refresh_token_jwt,
+            "token_type": "bearer"
+        }

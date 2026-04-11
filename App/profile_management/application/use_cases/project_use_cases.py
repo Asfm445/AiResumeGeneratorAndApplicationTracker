@@ -70,3 +70,34 @@ class ListProjectsUseCase:
     async def execute(self, user_id: str) -> List[Project]:
         result = await self.project_repo.get_all(user_id)
         return result
+
+class GetProjectUseCase:
+    def __init__(self, project_repo: ProjectRepository):
+        self.project_repo = project_repo
+
+    async def execute(self, project_id: int) -> Project:
+        return await self.project_repo.get_by_id(project_id)
+
+class UpdateProjectUseCase:
+    def __init__(self, project_repo: ProjectRepository):
+        self.project_repo = project_repo
+
+    async def execute(self, project_id: int, user_id: str, name: str, short_description: str, repo_url: str, status: str) -> Project:
+        project = Project(
+            id=project_id,
+            user_id=user_id,
+            name=name,
+            short_description=short_description,
+            repo_url=repo_url,
+            status=status,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        return await self.project_repo.update(project)
+
+class DeleteProjectUseCase:
+    def __init__(self, project_repo: ProjectRepository):
+        self.project_repo = project_repo
+
+    async def execute(self, project_id: int) -> bool:
+        return await self.project_repo.delete(project_id)

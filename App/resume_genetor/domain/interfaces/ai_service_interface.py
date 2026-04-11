@@ -22,17 +22,17 @@ class AiServiceInterface(ABC):
         pass
 
     @abstractmethod
-    async def generate_experience(self, experience_data: List[Dict], target_title: str) -> List[Dict]:
+    async def generate_experience(self, experience_data: List[Dict], target_title: str, target_description: Optional[str] = None) -> List[Dict]:
         """Generate tailored professional experience."""
         pass
 
     @abstractmethod
-    async def generate_projects(self, project_data: List[Dict], target_title: str) -> List[Dict]:
+    async def generate_projects(self, project_data: List[Dict], target_title: str, target_description: Optional[str] = None) -> List[Dict]:
         """Generate tailored project entries."""
         pass
 
     @abstractmethod
-    async def generate_skills(self, skill_data: List[Dict], target_title: str) -> Dict[str, List[str]]:
+    async def generate_skills(self, skill_data: List[Dict], target_title: str, target_description: Optional[str] = None) -> Dict[str, List[str]]:
         """Generate tailored skills list."""
         pass
 

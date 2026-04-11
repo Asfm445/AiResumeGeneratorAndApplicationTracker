@@ -18,6 +18,9 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
 async def get_auth_usecase(db: AsyncSession = Depends(get_db)) -> AuthUseCase:
     repo = SqlAlchemyUserRepository(db)
     return AuthUseCase(user_repository=repo)
@@ -40,6 +43,14 @@ async def login(req: Request, request: LoginRequest, usecase: AuthUseCase = Depe
     try:
         client_ip = req.client.host if req.client else ""
         result = await usecase.login(email=request.email, password=request.password, device_ip=client_ip)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+@router.post("/refresh")
+async def refresh(request: RefreshRequest, usecase: AuthUseCase = Depends(get_auth_usecase)):
+    try:
+        result = await usecase.refresh_token(refresh_token=request.refresh_token)
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))

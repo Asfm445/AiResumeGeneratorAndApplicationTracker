@@ -61,6 +61,17 @@ async def update_title(
          raise HTTPException(status_code=404, detail="Title not found or unauthorized")
     return updated
 
+@router.delete("/titles/{title_id}", tags=["Titles"])
+async def delete_title(
+    title_id: int,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    success = await controller.delete_title(title_id, user_id)
+    if not success:
+         raise HTTPException(status_code=404, detail="Title not found or unauthorized")
+    return {"message": "Title deleted"}
+
 @router.post("/projects", response_model=ProjectResponse, tags=["Projects"])
 async def create_project(
     project: ProjectCreate,
@@ -75,6 +86,40 @@ async def list_projects(
     controller: ProfileController = Depends(get_controller)
 ):
     return await controller.list_projects(user_id)
+
+@router.get("/projects/{project_id}", response_model=ProjectResponse, tags=["Projects"])
+async def get_project(
+    project_id: int,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    project = await controller.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+@router.put("/projects/{project_id}", response_model=ProjectResponse, tags=["Projects"])
+async def update_project(
+    project_id: int,
+    project: ProjectCreate,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    updated = await controller.update_project(project_id, user_id, project)
+    if not updated:
+         raise HTTPException(status_code=404, detail="Project not found or unauthorized")
+    return updated
+
+@router.delete("/projects/{project_id}", tags=["Projects"])
+async def delete_project(
+    project_id: int,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    success = await controller.delete_project(project_id)
+    if not success:
+         raise HTTPException(status_code=404, detail="Project not found")
+    return {"message": "Project deleted"}
 
 @router.post("/tags", response_model=TagResponse, tags=["Tags"])
 async def create_tag(

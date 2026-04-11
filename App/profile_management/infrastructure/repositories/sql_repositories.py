@@ -125,6 +125,17 @@ class SqlAlchemyTitleRepository(TitleRepository):
         await self.session.commit()
         await self.session.refresh(db_title)
         return self._to_domain(db_title)
+
+    async def delete(self, title_id: int, user_id: str) -> bool:
+        stmt = select(DBTitle).filter_by(id=title_id, user_id=user_id)
+        result = await self.session.execute(stmt)
+        db_title = result.scalars().first()
+        if db_title:
+            await self.session.delete(db_title)
+            await self.session.commit()
+            return True
+        return False
+
     async def get_title_embading_by_title_id(self,title_id: int):
         stmt = select(DBTitle.description_embedding).filter_by(id=title_id)
         result = await self.session.execute(stmt)
@@ -179,6 +190,33 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         if db_project:
             return self._to_domain(db_project)
         return None
+
+    async def update(self, project: Project) -> Optional[Project]:
+        stmt = select(DBProject).filter_by(id=project.id, user_id=project.user_id)
+        result = await self.session.execute(stmt)
+        db_project = result.scalars().first()
+        
+        if db_project:
+            db_project.name = project.name
+            db_project.short_description = project.short_description
+            db_project.repo_url = project.repo_url
+            db_project.status = project.status
+            db_project.updated_at = datetime.utcnow()
+            await self.session.commit()
+            await self.session.refresh(db_project)
+            return self._to_domain(db_project)
+        return None
+
+    async def delete(self, project_id: int) -> bool:
+        stmt = select(DBProject).filter_by(id=project_id)
+        result = await self.session.execute(stmt)
+        db_project = result.scalars().first()
+        
+        if db_project:
+            await self.session.delete(db_project)
+            await self.session.commit()
+            return True
+        return False
 
     async def attach_titles(self, user_id: str, project_id: int, title_ids: List[int]):
         for t_id in title_ids:

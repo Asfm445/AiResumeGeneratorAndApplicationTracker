@@ -29,6 +29,10 @@ class TitleRepository(ABC):
         pass
 
     @abstractmethod
+    async def delete(self, title_id: int, user_id: str) -> bool:
+        pass
+
+    @abstractmethod
     async def get_title_embading_by_title_id(self,title_id: int):
         pass
 
@@ -47,6 +51,14 @@ class ProjectRepository(ABC):
 
     @abstractmethod
     async def get_by_id(self, project_id: int) -> Optional[Project]:
+        pass
+
+    @abstractmethod
+    async def update(self, project: Project) -> Optional[Project]:
+        pass
+
+    @abstractmethod
+    async def delete(self, project_id: int) -> bool:
         pass
 
     @abstractmethod

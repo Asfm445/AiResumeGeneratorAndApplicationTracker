@@ -41,3 +41,10 @@ class UpdateTitleUseCase:
             db_title.description = description
             
         return await self.title_repo.update(db_title)
+
+class DeleteTitleUseCase:
+    def __init__(self, title_repo: TitleRepository):
+        self.title_repo = title_repo
+
+    async def execute(self, title_id: int, user_id: str) -> bool:
+        return await self.title_repo.delete(title_id, user_id)

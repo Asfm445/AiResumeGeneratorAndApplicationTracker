@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from App.profile_management.infrastructure.database.database import get_db
 from App.api.auth import get_current_user_id
+from typing import Optional
 
 from App.resume_genetor.application.usecase.resume_usecase import ResumeUseCase
 from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository
@@ -34,11 +35,12 @@ def get_resume_use_case(db: AsyncSession = Depends(get_db)):
 
 @router.get("/generate")
 async def generate_resume_endpoint(
+    title_id: Optional[int] = None,
     user_id: str = Depends(get_current_user_id),
     resume_use_case: ResumeUseCase = Depends(get_resume_use_case)
 ):
     try:
-        resume = await resume_use_case.generate_resume(user_id)
+        resume = await resume_use_case.generate_resume(user_id, title_id)
         return {"data": resume}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

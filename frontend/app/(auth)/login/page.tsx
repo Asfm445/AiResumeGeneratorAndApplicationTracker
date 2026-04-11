@@ -26,8 +26,22 @@ export default function LoginPage() {
 
     try {
       const response = await api.post("/api/v1/auth/login", formData);
-      const { access_token, user } = response.data;
-      setAuth(user, access_token);
+      const { access_token, refresh_token } = response.data;
+      
+      // Since backend doesn't return user info in login, let's fetch it
+      // or we can mock it for now if get_me is available.
+      // Better yet, let's fetch /api/v1/profile/me to get user info.
+      const profileResponse = await api.get("/api/v1/profile/me", {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+      
+      const user = {
+        id: profileResponse.data.userId,
+        email: formData.email,
+        name: profileResponse.data.fullName
+      };
+      
+      setAuth(user, access_token, refresh_token);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.detail || "Login failed. Please check your credentials.");

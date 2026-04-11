@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository
 from App.profile_management.application.use_cases.profile_use_cases import CreateOrUpdateProfileUseCase, GetProfileUseCase
-from App.profile_management.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase, UpdateTitleUseCase
-from App.profile_management.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase, CreateProjectDescriptionUseCase, ListProjectsUseCase
+from App.profile_management.application.use_cases.title_use_cases import CreateTitleUseCase, ListTitlesUseCase, UpdateTitleUseCase, DeleteTitleUseCase
+from App.profile_management.application.use_cases.project_use_cases import CreateProjectUseCase, AttachTitleToProjectUseCase, AttachTagToProjectUseCase, CreateProjectDescriptionUseCase, ListProjectsUseCase, GetProjectUseCase, UpdateProjectUseCase, DeleteProjectUseCase
 from App.profile_management.application.use_cases.tag_use_cases import CreateTagUseCase, ListTagsUseCase
 from App.profile_management.application.use_cases.experience_use_cases import CreateExprianceUseCase, UpdateExprianceUseCase, ListExpriancesUseCase, GetExprianceUseCase, DeleteExprianceUseCase
 from App.profile_management.application.use_cases.skill_use_cases import CreateSkillUseCase, UpdateSkillUseCase, ListSkillsUseCase, GetSkillUseCase, DeleteSkillUseCase
@@ -72,6 +72,8 @@ class ProfileResponse(BaseModel):
     headline: Optional[str] = None
     updatedAt: datetime
     bio: Optional[str] = None 
+    location: Optional[str] = None
+    yearsOfExperience: Optional[int] = 0
     titles: Optional[List[dict]] = None
 
 class TitleCreate(BaseModel):
@@ -135,7 +137,11 @@ class ProfileController:
         self.create_title_uc = CreateTitleUseCase(title_repo)
         self.list_titles_uc = ListTitlesUseCase(title_repo)
         self.update_title_uc = UpdateTitleUseCase(title_repo)
+        self.delete_title_uc = DeleteTitleUseCase(title_repo)
         self.create_project_uc = CreateProjectUseCase(project_repo)
+        self.get_project_uc = GetProjectUseCase(project_repo)
+        self.update_project_uc = UpdateProjectUseCase(project_repo)
+        self.delete_project_uc = DeleteProjectUseCase(project_repo)
         self.create_description_uc = CreateProjectDescriptionUseCase(project_repo)
         self.attach_titles_uc = AttachTitleToProjectUseCase(project_repo)
         self.list_projects_uc = ListProjectsUseCase(project_repo)
@@ -169,7 +175,10 @@ class ProfileController:
             userId=saved_profile.user_id,
             fullName=saved_profile.name,
             headline=saved_profile.headline,
-            updatedAt=saved_profile.updated_at
+            updatedAt=saved_profile.updated_at,
+            bio=saved_profile.about_text,
+            location=saved_profile.location,
+            yearsOfExperience=saved_profile.years_of_experience
         )
 
     async def get_profile(self, user_id: str):
@@ -182,6 +191,8 @@ class ProfileController:
             fullName=profile.name,
             headline=profile.headline,
             bio=profile.about_text,
+            location=profile.location,
+            yearsOfExperience=profile.years_of_experience,
             titles=[], 
             updatedAt=profile.updated_at
         )
@@ -222,6 +233,9 @@ class ProfileController:
             priority=updated_title.priority,
             description=updated_title.description
         )
+
+    async def delete_title(self, title_id: int, user_id: str):
+        return await self.delete_title_uc.execute(title_id, user_id)
 
     async def create_project(self, user_id: str, data: ProjectCreate):
         saved_project = await self.create_project_uc.execute(
@@ -269,6 +283,40 @@ class ProfileController:
                 ] if p.project_description else None
             ) for p in projects
         ]
+
+    async def get_project(self, project_id: int):
+        p = await self.get_project_uc.execute(project_id)
+        if not p:
+            return None
+        return ProjectResponse(
+            id=str(p.id) if p.id else None,
+            name=p.name,
+            status=p.status,
+            project_description=[
+                DescriptionCreate(type=d.type, text=d.text) 
+                for d in p.project_description
+            ] if p.project_description else None
+        )
+
+    async def update_project(self, project_id: int, user_id: str, data: ProjectCreate):
+        updated = await self.update_project_uc.execute(
+            project_id=project_id,
+            user_id=user_id,
+            name=data.name,
+            short_description=data.shortDescription,
+            repo_url=data.repoUrl,
+            status=data.status
+        )
+        if not updated:
+            return None
+        return ProjectResponse(
+            id=str(updated.id),
+            name=updated.name,
+            status=updated.status
+        )
+
+    async def delete_project(self, project_id: int):
+        return await self.delete_project_uc.execute(project_id)
 
     async def list_tags(self):
         tags = await self.list_tags_uc.execute()

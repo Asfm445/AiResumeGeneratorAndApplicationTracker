@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, Download, Copy, Check, FileDown, Loader2 } from "lucide-react";
+import { Sparkles, Download, Copy, Check, FileDown, Loader2, Trophy } from "lucide-react";
 import api from "@/lib/api";
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
 import { useAuthStore } from "@/lib/store";
@@ -14,16 +14,37 @@ export default function ResumeBuilderPage() {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [resume, setResume] = useState<any | null>(null);
+  const [titles, setTitles] = useState<any[]>([]);
+  const [selectedTitleId, setSelectedTitleId] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const user = useAuthStore((state) => state.user);
   const resumeRef = useRef<HTMLDivElement>(null);
   const captureRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const fetchTitles = async () => {
+      try {
+        const response = await api.get("/api/v1/profile/titles");
+        setTitles(response.data);
+        if (response.data.length > 0) {
+          // Default to the first one (highest priority if backend returns sorted)
+          setSelectedTitleId(response.data[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch titles", err);
+      }
+    };
+    fetchTitles();
+  }, []);
+
   const generateResume = async () => {
     setLoading(true);
     setResume(null);
     try {
-      const response = await api.get("/api/v1/resume/generate");
+      const url = selectedTitleId 
+        ? `/api/v1/resume/generate?title_id=${selectedTitleId}` 
+        : "/api/v1/resume/generate";
+      const response = await api.get(url);
       const resumeData = response.data.data;
       
       setResume({
@@ -133,7 +154,22 @@ export default function ResumeBuilderPage() {
           <h1 className="text-3xl font-bold">AI Resume Builder</h1>
           <p className="text-muted-foreground">Expertly crafted documents based on your professional profile.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          {titles.length > 0 && (
+            <div className="flex items-center gap-2 bg-muted/50 p-1.5 px-3 rounded-lg border">
+              <Trophy size={16} className="text-primary" />
+              <select 
+                className="bg-transparent text-sm font-medium focus:outline-none min-w-[150px]"
+                value={selectedTitleId}
+                onChange={(e) => setSelectedTitleId(e.target.value)}
+              >
+                {titles.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          
           {resume && (
             <>
               <Button variant="outline" onClick={copyToClipboard} disabled={downloading}>
