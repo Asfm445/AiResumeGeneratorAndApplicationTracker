@@ -16,7 +16,7 @@ class AiService(AiServiceInterface):
             temperature=temperature,
             response_mime_type="application/json"
         )
-        self.model = genai.GenerativeModel('gemini-3-flash-preview')
+        self.model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
 
     def _strip_code_block_and_whitespace(self, text: str) -> str:
         """Strip markdown code fences, leading/trailing whitespace, and language hints."""
@@ -66,62 +66,101 @@ class AiService(AiServiceInterface):
             raise Exception(f"Failed to get response from Gemini: {str(e)}")
 
 
-    async def generate_resume(self, profile_data: Dict) -> Any:
-
-        print("+++++++++++++++++++++++++++++++++++++++++api key+++++++++++++++++")
-        print(self.api_key)
-        print(self.model)
-        print("+++++++++++++++++++++++++++++++++++++++++api key+++++++++++++++++")
-
-        # print(profile_data)
+    async def generate_summary(self, profile_data: Dict) -> str:
         prompt = f"""
             You are a professional AI Resume Builder. 
-            Your task is to generate a **high-quality, tailored, professional resume** based on the user's profile data.
-            Return the output strictly as a Python dictionary with the following structure and keys: 
-
-            1. "professional_summary": 
-                - Max 3-4 impactful lines.
-                - Tailored to the user's experience, skills, and headline.
-                - Aligned with the user's target role/title.
-                - Do NOT generate multiple versions (only one summary).
-                - Don't use exagragrating words like passionate, Highly motivated, etc.
-                
-            2. "professional_experience": 
-                - Take **relevant experiences** aligned to the target role/title.
-                - Value should be a **list** of experience entries.
-                - Each entry must include: **Job Title | Company | Dates**.
-                - Use **bullet points** for responsibilities and achievements.
-                - Start each bullet with **strong action verbs**.
-                - Highlight **achievements, results, or measurable impact**.
-                - Keep content **concise, clear, and professional**.
-
-            3. "projects": 
-                - Include **relevant projects** aligned to the target role/title.
-                - Value should be a **list** of project entries.
-                - Each entry must include: **Project Name | Role | Dates (if applicable)**.
-                - Include **technologies/tools** used.
-                - Use **3-5 concise bullet points** per project describing role, key features, and outcomes.
-                - Start bullets with **strong action verbs**.
-                - Highlight **results, metrics, or measurable impact**.
-                - Keep content **clear, professional, and tailored to a technical resume**.
-
-            4. "skills": 
-                - Include only **relevant skills** aligned to the target role/title
-                - skills should be disctionary with key skill type eg. programming language etc and value should be list of skills
-                - Skills should come **only from experiences, projects, or user-provided skills**.
-                - Do not include unrelated skills or placeholders.
-                - never invent new skill
-
-            **Important Instructions:**
-            - Prioritize **clarity, readability, and impact** for a professional resume.
-            - Use a **consistent style** for dates, bullet points, and formatting.
-            - Do not hallucinate data; only use info from the profile_data provided.
-            - Output must be a valid Python dictionary, ready to use.
-
-            Here is the user's profile data:
-            {profile_data}
+            Generate a high-quality **professional summary** (max 3-4 impactful lines).
+            Tailored to: {profile_data.get('headline', '')} and target title: {profile_data.get('title', '')}.
+            Use bio: {profile_data.get('bio', '')}.
+            Don't use exaggerating words like 'passionate' or 'highly motivated'.
+            
+            Return JSON in this format:
+            {{
+              "summary": "Impactful professional summary text here."
+            }}
             """
-        return await self.send_message(prompt)
+        result = await self.send_message(prompt)
+        return result.get("summary", "")
+
+    async def generate_experience(self, experience_data: List[Dict], target_title: str) -> List[Dict]:
+        prompt = f"""
+            Refine the following professional experiences to align with the target role: {target_title}.
+            Use strong action verbs and highlight results/impact.
+            Return a list of experiences where each experience matches this JSON format:
+            {{
+              "job_title": "Position Name",
+              "company": "Company Name",
+              "dates": "Month Year - Month Year (or Present)",
+              "responsibilities": ["Bullet point 1", "Bullet point 2"]
+            }}
+            
+            Return JSON in this format:
+            {{
+              "experiences": [...]
+            }}
+            
+            Experience data: {experience_data}
+            """
+        result = await self.send_message(prompt)
+        if isinstance(result, dict) and "experiences" in result:
+            return result["experiences"]
+        return result if isinstance(result, list) else []
+
+    async def generate_projects(self, project_data: List[Dict], target_title: str) -> List[Dict]:
+        prompt = f"""
+            Refine the following projects for the target role: {target_title}.
+            Highlight role, tech stack, and outcomes.
+            Return a list of projects where each project matches this JSON format:
+            {{
+              "project_name": "Project Name",
+              "role": "Your Role",
+              "dates": "Start - End",
+              "technologies": ["Tech 1", "Tech 2"],
+              "description": ["Bullet point 1", "Bullet point 2"]
+            }}
+            
+            Return JSON in this format:
+            {{
+              "projects": [...]
+            }}
+            
+            Project data: {project_data}
+            """
+        result = await self.send_message(prompt)
+        if isinstance(result, dict) and "projects" in result:
+            return result["projects"]
+        return result if isinstance(result, list) else []
+
+    async def generate_skills(self, skill_data: List[Dict], target_title: str) -> Dict[str, List[str]]:
+        prompt = f"""
+            Categorize and refine these skills for a {target_title} resume: {skill_data}.
+            Return a JSON dictionary where keys are skill categories and values are lists of skills.
+            Example: {{"Programming Languages": ["Python", "JS"], "Tools": ["Docker"]}}
+            Only use skills provided in the data.
+            """
+        result = await self.send_message(prompt)
+        return result if isinstance(result, dict) else {}
+
+    async def generate_resume(self, profile_data: Dict) -> Any:
+        title = profile_data.get("title", "Professional")
+        
+        # Parallel execution for independent sections
+        import asyncio
+        summary_task = self.generate_summary(profile_data)
+        experience_task = self.generate_experience(profile_data.get("expriances", []), title)
+        projects_task = self.generate_projects(profile_data.get("projects", []), title)
+        skills_task = self.generate_skills(profile_data.get("skills", []), title)
+        
+        summary, experiences, projects, skills = await asyncio.gather(
+            summary_task, experience_task, projects_task, skills_task
+        )
+        
+        return {
+            "professional_summary": summary,
+            "professional_experience": experiences,
+            "projects": projects,
+            "skills": skills
+        }
 
 
     async def generate_tags(self, user_id: str, title: TitleForAi) -> List[str]:

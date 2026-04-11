@@ -22,49 +22,72 @@ class ResumeUseCase:
         self.expriance_repo = expriance_repo
         self.embedding_service = embedding_service
 
-    async def generate_resume(self, user_id: str) -> str:
+    async def generate_resume(self, user_id: str) -> dict:
         # Fetch user profile and related data
         profile = await self.profile_repo.get_by_user_id(user_id)
         if not profile:
             raise ValueError("User profile not found")
-        titles= await self.title_repo.get_all(user_id)
-        skills= await self.skill_repo.get_all(user_id)
+        
+        titles = await self.title_repo.get_all(user_id)
+        skills = await self.skill_repo.get_all(user_id)
+        
+        if not titles:
+            target_title = "Professional"
+        else:
+            titles.sort(key=lambda t: t.priority, reverse=True)
+            target_title = titles[0].title_name
 
+            emb = await self.title_repo.get_title_embading_by_title_id(titles[0].id)
+            if emb is None:
+                emb = await self.embedding_service.embed_text(titles[0].description)
+                await self.title_repo.save_embedding(titles[0].id, emb)
 
+        # Filter projects by embedding if title exists, else get all
+        if titles:
+            projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 3)
+        else:
+            projects = await self.project_repo.get_all(user_id)
 
-        titles.sort(key= lambda t: t.priority, reverse=True)
+        expriances = await self.expriance_repo.get_all(user_id)
 
-        emb = await self.title_repo.get_title_embading_by_title_id(titles[0].id)
-        if emb is None:
-            emb = await self.embedding_service.embed_text(titles[0].description)
-            await self.title_repo.save_embedding(titles[0].id, emb)
-
-        projects = await self.project_repo.filter_projects_by_embedding(user_id, emb, 2)
-        print("+++++++++++++++++++++++++++++++++++++filtered projects+++++++++++++++++++++++++++++")
-        print([project.name  for project in projects])
-        print("+++++++++++++++++++++++++++++++++++++filtered projects+++++++++++++++++++++++++++++")
-
-        expriances= await self.expriance_repo.get_all(user_id)
-
-
-        data={
-            "name": profile.name,
+        # Prepare data for AI sections
+        ai_input_data = {
+            "title": target_title,
             "headline": profile.headline,
             "bio": profile.about_text,
-            "location": profile.location,
-            "years_of_experience": profile.years_of_experience,
-            "skills": [{"skill_type":skill.skill_type,"skills":skill.skills} for skill in skills],
-            "projects":[{"name":project.name,"short_description":project.short_description,"repo_url":project.repo_url,"status":project.repo_url,"project_description":{project_desc.type :project_desc.text for project_desc in project.project_description}} for project in projects],
-            "expriances":[{"company":exp.company_name,"position":exp.role_title,"start_date":exp.start_date ,"end_date":exp.end_date if exp.end_date else "Present","description":exp.short_description, "employement_type":exp.employement_type, "tech_stack":exp.tech_stack} for exp in expriances]
-            }
+            "skills": [{"skill_type": s.skill_type, "skills": s.skills} for s in skills],
+            "projects": [
+                {
+                    "name": p.name,
+                    "short_description": p.short_description,
+                    "project_description": [pd.text for pd in p.project_description]
+                } for p in projects
+            ],
+            "expriances": [
+                {
+                    "company_name": e.company_name,
+                    "role_title": e.role_title,
+                    "start_date": e.start_date.strftime("%Y-%m") if e.start_date else "",
+                    "end_date": e.end_date.strftime("%Y-%m") if e.end_date else "Present",
+                    "short_description": e.short_description,
+                    "tech_stack": e.tech_stack
+                } for e in expriances
+            ]
+        }
 
-        if titles:
-            data["title"]= titles[0].title_name
-
+        # Generate AI parts
+        ai_generated_resume = await self.ai_service.generate_resume(ai_input_data)
         
-
-        resume = await self.ai_service.generate_resume(data)
-        return resume
+        # Combine with static profile data
+        full_resume = {
+            "name": profile.name,
+            "email": profile.email,
+            "headline": profile.headline or target_title,
+            "location": profile.location,
+            **ai_generated_resume
+        }
+        
+        return full_resume
 
     async def generate_tags(self, user_id: str) -> str:
         titles= await self.title_repo.get_all(user_id)
