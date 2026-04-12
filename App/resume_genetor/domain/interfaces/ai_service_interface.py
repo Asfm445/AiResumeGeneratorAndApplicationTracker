@@ -17,6 +17,11 @@ class AiServiceInterface(ABC):
         pass
 
     @abstractmethod
+    async def generate_headline(self, profile_data: Dict) -> str:
+        """Generate a tailored headline based on the profile data and target title."""
+        pass
+
+    @abstractmethod
     async def generate_summary(self, profile_data: Dict) -> str:
         """Generate a professional summary."""
         pass
@@ -38,7 +43,12 @@ class AiServiceInterface(ABC):
 
     @abstractmethod
     async def generate_resume(self, profile_data: Dict) -> Dict[str, Any]:
-        """Generate a full resume (kept for backward compatibility or as a master call)."""
+        """Generate a full resume."""
+        pass
+
+    @abstractmethod
+    async def refine_resume(self, current_resume: Dict, comment: str) -> Dict[str, Any]:
+        """Refine an existing resume based on user comments."""
         pass
 
     @abstractmethod

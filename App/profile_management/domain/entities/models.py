@@ -89,3 +89,12 @@ class Skill:
     skills: List[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     id: Optional[int] = None
+
+@dataclass
+class GeneratedResume:
+    user_id: str
+    title_id: int
+    resume_data: dict
+    version: int
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    id: Optional[int] = None

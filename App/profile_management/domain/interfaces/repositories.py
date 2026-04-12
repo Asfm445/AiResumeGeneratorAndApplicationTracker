@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, Expriance, Skill
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, Expriance, Skill, GeneratedResume
 
 class ProfileRepository(ABC):
     @abstractmethod
@@ -138,4 +138,26 @@ class SkillRepository(ABC):
     
     @abstractmethod
     async def delete(self, skill_id: int) -> bool:
+        pass
+
+
+class ResumeRepository(ABC):
+    @abstractmethod
+    async def save(self, resume: GeneratedResume) -> GeneratedResume:
+        pass
+
+    @abstractmethod
+    async def get_by_id(self, resume_id: int) -> Optional[GeneratedResume]:
+        pass
+
+    @abstractmethod
+    async def get_all_by_title(self, title_id: int) -> List[GeneratedResume]:
+        pass
+
+    @abstractmethod
+    async def get_recent(self, user_id: str, limit: int = 5) -> List[GeneratedResume]:
+        pass
+
+    @abstractmethod
+    async def get_latest_version(self, title_id: int) -> int:
         pass

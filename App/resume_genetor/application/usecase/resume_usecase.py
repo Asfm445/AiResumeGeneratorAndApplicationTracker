@@ -1,5 +1,5 @@
-from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, SkillRepository, ProjectRepository, ExprianceRepository
-from App.profile_management.domain.entities.models import UserProfile
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, SkillRepository, ProjectRepository, ExprianceRepository, ResumeRepository
+from App.profile_management.domain.entities.models import UserProfile, GeneratedResume
 from App.resume_genetor.domain.interfaces.ai_service_interface import AiServiceInterface
 from App.resume_genetor.domain.models.model import TitleForAi
 from App.resume_genetor.domain.interfaces.embeding_service import EmbeddingService
@@ -13,7 +13,8 @@ class ResumeUseCase:
                  skill_repo: SkillRepository,
                  project_repo: ProjectRepository,
                  expriance_repo: ExprianceRepository,
-                 embedding_service: EmbeddingService
+                 embedding_service: EmbeddingService,
+                 resume_repo: ResumeRepository
                  ):
         self.profile_repo = profile_repo
         self.ai_service = ai_service
@@ -22,8 +23,10 @@ class ResumeUseCase:
         self.project_repo = project_repo
         self.expriance_repo = expriance_repo
         self.embedding_service = embedding_service
+        self.resume_repo = resume_repo
 
     async def generate_resume(self, user_id: str, title_id: Optional[int] = None) -> dict:
+        
         # Fetch user profile and related data
         profile = await self.profile_repo.get_by_user_id(user_id)
         if not profile:
@@ -42,6 +45,10 @@ class ResumeUseCase:
             # Fallback to highest priority title
             titles.sort(key=lambda t: t.priority, reverse=True)
             target_title_obj = titles[0]
+
+        print("++++++++++++++++++++++++++++++++++++++++++++++++title here+++++++++++++++++++++")
+        print(target_title_obj)
+        
 
         if not target_title_obj:
             target_title = "Professional"
@@ -94,12 +101,68 @@ class ResumeUseCase:
         full_resume = {
             "name": profile.name,
             "email": profile.email,
-            "headline": profile.headline or target_title,
             "location": profile.location,
             **ai_generated_resume
         }
+
+        # Save generated resume if target_title_obj exists
+        if target_title_obj:
+            latest_version = await self.resume_repo.get_latest_version(target_title_obj.id)
+            new_version = latest_version + 1
+            
+            generated_resume_entity = GeneratedResume(
+                user_id=user_id,
+                title_id=target_title_obj.id,
+                resume_data=full_resume,
+                version=new_version
+            )
+            await self.resume_repo.save(generated_resume_entity)
+            full_resume["version"] = new_version
         
         return full_resume
+
+    async def refine_resume(self, user_id: str, resume_id: int, comment: str) -> dict:
+        # Fetch the current resume
+        resume_entity = await self.resume_repo.get_by_id(resume_id)
+        if not resume_entity or resume_entity.user_id != user_id:
+            raise ValueError("Resume not found or unauthorized")
+
+        # Call AI to refine
+        refined_data = await self.ai_service.refine_resume(resume_entity.resume_data, comment)
+        
+        # Increment version and save as new
+        latest_version = await self.resume_repo.get_latest_version(resume_entity.title_id)
+        new_version = latest_version + 1
+        
+        new_resume_entity = GeneratedResume(
+            user_id=user_id,
+            title_id=resume_entity.title_id,
+            resume_data=refined_data,
+            version=new_version
+        )
+        saved_resume = await self.resume_repo.save(new_resume_entity)
+        
+        return {**refined_data, "id": saved_resume.id, "version": saved_resume.version}
+
+    async def update_resume(self, user_id: str, resume_id: int, updated_data: dict) -> dict:
+        # Fetch current to ensure ownership
+        resume_entity = await self.resume_repo.get_by_id(resume_id)
+        if not resume_entity or resume_entity.user_id != user_id:
+            raise ValueError("Resume not found or unauthorized")
+
+        # Save as a NEW version (preserving history)
+        latest_version = await self.resume_repo.get_latest_version(resume_entity.title_id)
+        new_version = latest_version + 1
+
+        new_resume_entity = GeneratedResume(
+            user_id=user_id,
+            title_id=resume_entity.title_id,
+            resume_data=updated_data,
+            version=new_version
+        )
+        saved_resume = await self.resume_repo.save(new_resume_entity)
+
+        return {**updated_data, "id": saved_resume.id, "version": saved_resume.version}
 
     async def generate_tags(self, user_id: str, title_id: Optional[int] = None) -> str:
         titles = await self.title_repo.get_all(user_id)

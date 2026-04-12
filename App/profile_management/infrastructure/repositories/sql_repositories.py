@@ -2,9 +2,9 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, func, update
 from sqlalchemy.orm import selectinload
-from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill
-from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository
-from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill, GeneratedResume
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository, ResumeRepository
+from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill, GeneratedResume as DBGeneratedResume
 from datetime import datetime
 
 class SqlAlchemyProfileRepository(ProfileRepository):
@@ -539,4 +539,58 @@ class SqlAlchemySkillRepository(SkillRepository):
             skill_type=db_skill.skill_type,
             skills=db_skill.skills,
             created_at=db_skill.created_at
+        )
+
+
+class SqlAlchemyResumeRepository(ResumeRepository):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def save(self, resume: GeneratedResume) -> GeneratedResume:
+        db_resume = DBGeneratedResume(
+            user_id=resume.user_id,
+            title_id=resume.title_id,
+            resume_data=resume.resume_data,
+            version=resume.version,
+            created_at=datetime.utcnow()
+        )
+        self.session.add(db_resume)
+        await self.session.commit()
+        await self.session.refresh(db_resume)
+        return self._to_domain(db_resume)
+
+    async def get_by_id(self, resume_id: int) -> Optional[GeneratedResume]:
+        stmt = select(DBGeneratedResume).filter_by(id=resume_id)
+        result = await self.session.execute(stmt)
+        db_resume = result.scalars().first()
+        if db_resume:
+            return self._to_domain(db_resume)
+        return None
+
+    async def get_all_by_title(self, title_id: int) -> List[GeneratedResume]:
+        stmt = select(DBGeneratedResume).filter_by(title_id=title_id).order_by(DBGeneratedResume.version.desc())
+        result = await self.session.execute(stmt)
+        db_resumes = result.scalars().all()
+        return [self._to_domain(r) for r in db_resumes]
+
+    async def get_recent(self, user_id: str, limit: int = 5) -> List[GeneratedResume]:
+        stmt = select(DBGeneratedResume).filter_by(user_id=user_id).order_by(DBGeneratedResume.created_at.desc()).limit(limit)
+        result = await self.session.execute(stmt)
+        db_resumes = result.scalars().all()
+        return [self._to_domain(r) for r in db_resumes]
+
+    async def get_latest_version(self, title_id: int) -> int:
+        stmt = select(func.max(DBGeneratedResume.version)).filter_by(title_id=title_id)
+        result = await self.session.execute(stmt)
+        latest_version = result.scalar()
+        return latest_version if latest_version is not None else 0
+
+    def _to_domain(self, db_resume: DBGeneratedResume) -> GeneratedResume:
+        return GeneratedResume(
+            id=db_resume.id,
+            user_id=db_resume.user_id,
+            title_id=db_resume.title_id,
+            resume_data=db_resume.resume_data,
+            version=db_resume.version,
+            created_at=db_resume.created_at
         )

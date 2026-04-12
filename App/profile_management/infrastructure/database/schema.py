@@ -36,6 +36,8 @@ class Title(Base):
 
     created_at = Column(DateTime, nullable=False)
 
+    resumes = relationship("GeneratedResume", back_populates="title", cascade="all, delete-orphan")
+
     __table_args__ = (
         UniqueConstraint('user_id', 'title_name'),
     )
@@ -129,5 +131,20 @@ class Skill(Base):
     skills = Column(JSON, nullable=False) # list of skills
 
     created_at = Column(DateTime, nullable=False)
+
+
+class GeneratedResume(Base):
+    __tablename__ = "generated_resumes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(255), nullable=False, index=True)
+    title_id = Column(Integer, ForeignKey('titles.id'), nullable=False)
+
+    resume_data = Column(JSON, nullable=False)
+    version = Column(Integer, nullable=False)
+
+    created_at = Column(DateTime, nullable=False)
+
+    title = relationship("Title", back_populates="resumes")
 
 

@@ -66,6 +66,27 @@ class AiService(AiServiceInterface):
             raise Exception(f"Failed to get response from Gemini: {str(e)}")
 
 
+    async def generate_headline(self, profile_data: Dict) -> str:
+        prompt = f"""
+            You are a professional AI Resume Builder. 
+            Generate a short, impactful **professional headline** (one line).
+            Target Role: {profile_data.get('title', '')}
+            Target Role Description: {profile_data.get('title_description', '')}
+            User current Headline: {profile_data.get('headline', '')}
+            User Bio: {profile_data.get('bio', '')}
+            
+            CRITICAL INSTRUCTION: The headline MUST reflect the Target Role as the user's primary identity.
+            DO NOT use "transitioning" or "aspiring" language. 
+            Include key technologies relevant to the Target Role that the user possesses.
+            
+            Return JSON in this format:
+            {{
+              "headline": "Impactful professional headline here."
+            }}
+            """
+        result = await self.send_message(prompt)
+        return result.get("headline", "")
+
     async def generate_summary(self, profile_data: Dict) -> str:
         prompt = f"""
             You are a professional AI Resume Builder. 
@@ -75,9 +96,10 @@ class AiService(AiServiceInterface):
             User Headline: {profile_data.get('headline', '')}
             User Bio: {profile_data.get('bio', '')}
             
-            CRITICAL INSTRUCTION: Align the summary strictly with the Target Role. 
-            If the target is a Backend role but the bio mentions Frontend, emphasize architectural, 
-            data-handling, or logic-heavy aspects that translate to the backend.
+            CRITICAL INSTRUCTION: Adopt the identity of the Target Role immediately. 
+            Start with "[Target Role] with expertise in..." 
+            Highlight relevant projects and skills from the user's data that prove competence in the Target Role.
+            Minimize or omit background info that contradicts the Target Role unless it can be framed as a complementary technical strength (e.g., "Full-stack perspective on API integration").
             Don't use exaggerating words like 'passionate' or 'highly motivated'.
             
             Return JSON in this format:
@@ -170,21 +192,41 @@ class AiService(AiServiceInterface):
         
         # Parallel execution for independent sections
         import asyncio
+        headline_task = self.generate_headline(profile_data)
         summary_task = self.generate_summary(profile_data)
         experience_task = self.generate_experience(profile_data.get("expriances", []), title, description)
         projects_task = self.generate_projects(profile_data.get("projects", []), title, description)
         skills_task = self.generate_skills(profile_data.get("skills", []), title, description)
         
-        summary, experiences, projects, skills = await asyncio.gather(
-            summary_task, experience_task, projects_task, skills_task
+        headline, summary, experiences, projects, skills = await asyncio.gather(
+            headline_task, summary_task, experience_task, projects_task, skills_task
         )
         
         return {
+            "headline": headline,
             "professional_summary": summary,
             "professional_experience": experiences,
             "projects": projects,
             "skills": skills
         }
+
+    async def refine_resume(self, current_resume: Dict, comment: str) -> Dict[str, Any]:
+        prompt = f"""
+            You are a professional AI Resume Editor. 
+            The user wants to refine their current resume based on this comment: "{comment}"
+            
+            Current Resume Data:
+            {json.dumps(current_resume, indent=2)}
+            
+            CRITICAL INSTRUCTION: Apply the user's feedback carefully across all relevant sections. 
+            Maintain the overall structure and quality.
+            Return the FULL updated resume in JSON format with these exact keys:
+            "headline", "professional_summary", "professional_experience", "projects", "skills".
+            
+            Ensure professional_experience and projects remain lists of objects as in the input.
+            Ensure skills remains a dictionary of categories.
+            """
+        return await self.send_message(prompt)
 
 
     async def generate_tags(self, user_id: str, title: TitleForAi) -> List[str]:
