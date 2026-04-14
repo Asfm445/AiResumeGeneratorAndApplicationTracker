@@ -96,5 +96,8 @@ class GeneratedResume:
     title_id: int
     resume_data: dict
     version: int
+    job_description: Optional[str] = None
+    job_title: Optional[str] = None
+    company_name: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     id: Optional[int] = None

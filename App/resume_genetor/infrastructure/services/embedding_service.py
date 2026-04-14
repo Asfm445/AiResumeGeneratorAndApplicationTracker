@@ -12,7 +12,9 @@ class GeminiEmbeddingService(EmbeddingService):
         
     async def embed_text(self, text: str) -> List[float]:
         # Use models/text-embedding-004 for the latest version
-        result = genai.embed_content(
+        import asyncio
+        result = await asyncio.to_thread(
+            genai.embed_content,
             model="models/gemini-embedding-001",
             content=text,
             task_type="retrieval_document" # Use retrieval_query for searches

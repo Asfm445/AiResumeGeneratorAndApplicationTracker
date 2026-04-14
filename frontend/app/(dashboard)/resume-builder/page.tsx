@@ -4,13 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Sparkles, Download, Copy, Check, FileDown, Loader2, Trophy, Clock, FileText, ArrowLeft, Plus, MessageSquare, Edit3, Save, X } from "lucide-react";
+import { Sparkles, Download, Copy, Check, FileDown, Loader2, Trophy, Clock, FileText, ArrowLeft, Plus, MessageSquare, Edit3, Save, X, Trash2, Briefcase } from "lucide-react";
 import api from "@/lib/api";
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
 import { useAuthStore } from "@/lib/store";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 export default function ResumeBuilderPage() {
   const searchParams = useSearchParams();
@@ -31,6 +32,12 @@ export default function ResumeBuilderPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>(null);
   const [showRefinePanel, setShowRefinePanel] = useState(false);
+
+  // Tailoring states
+  const [showTailorModal, setShowTailorModal] = useState(false);
+  const [jobDescription, setJobDescription] = useState("");
+  const [tailoredJobTitle, setTailoredJobTitle] = useState("");
+  const [tailoredCompany, setTailoredCompany] = useState("");
 
   const user = useAuthStore((state) => state.user);
   const resumeRef = useRef<HTMLDivElement>(null);
@@ -145,6 +152,70 @@ export default function ResumeBuilderPage() {
     }
   };
 
+  const handleDeleteResume = async (e: React.MouseEvent, resumeId: number) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this resume? This cannot be undone.")) return;
+    
+    setLoading(true);
+    try {
+      await api.delete(`/api/v1/resume/${resumeId}`);
+      
+      // Update local state
+      const updatedResumes = resumes.filter(r => r.id !== resumeId);
+      setResumes(updatedResumes);
+      
+      // If the deleted resume was selected, deselect it
+      if (selectedResume?.id === resumeId) {
+        setSelectedResume(null);
+        setIsEditing(false);
+        router.push('/resume-builder');
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to delete resume.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTailorResume = async () => {
+    if (!jobDescription.trim()) {
+      alert("Please provide a job description.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post("/api/v1/resume/tailor", {
+        job_description: jobDescription,
+        title_id: selectedTitleId ? parseInt(selectedTitleId) : null,
+        job_title: tailoredJobTitle,
+        company_name: tailoredCompany
+      });
+
+      const newResume = response.data.data;
+      
+      // Update resumes list
+      const historyRes = await api.get(`/api/v1/resume/history/${selectedTitleId}`);
+      setResumes(historyRes.data.data);
+      
+      // Select the new resume
+      setSelectedResume(newResume);
+      setEditedData(JSON.parse(JSON.stringify(newResume.resume_data)));
+      
+      // Reset and close modal
+      setJobDescription("");
+      setTailoredJobTitle("");
+      setTailoredCompany("");
+      setShowTailorModal(false);
+      
+      router.push(`/resume-builder?resume_id=${newResume.id}`);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to tailor resume.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copyToClipboard = () => {
     if (selectedResume) {
       const data = isEditing ? editedData : selectedResume.resume_data;
@@ -250,9 +321,14 @@ export default function ResumeBuilderPage() {
                      </Button>
                    </>
                  ) : (
-                   <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                      <Edit3 className="mr-2 h-4 w-4" /> Edit
-                   </Button>
+                   <div className="flex items-center gap-2">
+                     <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                        <Edit3 className="mr-2 h-4 w-4" /> Edit
+                     </Button>
+                     <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={(e) => handleDeleteResume(e, selectedResume.id)}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                     </Button>
+                   </div>
                  )}
                  
                  <Button variant="outline" size="sm" onClick={copyToClipboard}>
@@ -312,17 +388,37 @@ export default function ResumeBuilderPage() {
               </CardHeader>
               <CardContent className="p-2 space-y-1">
                 {resumes.map((r) => (
-                  <button 
-                    key={r.id}
-                    onClick={() => selectResume(r)}
-                    className={`w-full text-left p-3 rounded-lg text-xs transition-colors hover:bg-indigo-50 group flex flex-col gap-1 ${selectedResume?.id === r.id ? 'bg-indigo-50 border-l-2 border-indigo-600' : ''}`}
-                  >
-                     <div className="flex justify-between items-center">
-                        <span className="font-bold text-indigo-700">v{r.version}</span>
-                        <span className="text-muted-foreground">{format(new Date(r.created_at), "MMM d")}</span>
-                     </div>
-                     <span className="truncate text-muted-foreground group-hover:text-indigo-900">{r.resume_data.headline}</span>
-                  </button>
+                  <div key={r.id} className="relative group/item">
+                    <button 
+                      onClick={() => selectResume(r)}
+                      className={`w-full text-left p-3 rounded-lg text-xs transition-colors hover:bg-indigo-50 group flex flex-col gap-1 ${selectedResume?.id === r.id ? 'bg-indigo-50 border-l-2 border-indigo-600' : ''}`}
+                    >
+                      <div className="flex justify-between items-center">
+                          <span className="font-bold text-indigo-700">v{r.version}</span>
+                          <span className="text-muted-foreground">{format(new Date(r.created_at), "MMM d")}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5 pr-6">
+                        {r.job_title ? (
+                          <div className="flex items-center gap-1 font-bold text-indigo-900 truncate">
+                            <Briefcase size={10} className="shrink-0" />
+                            {r.job_title}
+                          </div>
+                        ) : (
+                          <span className="truncate text-muted-foreground group-hover:text-indigo-900">{r.resume_data.headline}</span>
+                        )}
+                        {r.company_name && (
+                           <span className="text-[10px] text-slate-500 truncate italic">@ {r.company_name}</span>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteResume(e, r.id)}
+                      className="absolute right-2 bottom-3 p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+                      title="Delete version"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 ))}
               </CardContent>
             </Card>
@@ -343,20 +439,34 @@ export default function ResumeBuilderPage() {
                 <h3 className="font-bold text-indigo-900">Generate New</h3>
                 <p className="text-xs text-indigo-600 mt-1">Create a fresh AI-tailored resume for {currentTitle?.name || 'this role'}</p>
               </div>
-              {loading && <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-[1px]">
-                 <div className="flex flex-col items-center gap-2">
-                    <Sparkles className="h-6 w-6 text-indigo-600 animate-pulse" />
-                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">AI is thinking...</span>
-                 </div>
-              </div>}
+            </Card>
+
+            <Card 
+              className="border-dashed border-2 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition-all group relative overflow-hidden h-[300px] flex flex-col items-center justify-center text-center"
+              onClick={() => setShowTailorModal(true)}
+            >
+              <div className="bg-emerald-100 p-4 rounded-full group-hover:scale-110 transition-transform">
+                <Briefcase className="h-8 w-8 text-emerald-600" />
+              </div>
+              <div className="mt-4 px-4">
+                <h3 className="font-bold text-emerald-900">Tailor to Job</h3>
+                <p className="text-xs text-emerald-600 mt-1">Paste a job description to optimize your resume</p>
+              </div>
             </Card>
 
             {resumes.map((r) => (
               <Card 
                 key={r.id} 
-                className="cursor-pointer hover:shadow-lg transition-all border-slate-200 overflow-hidden h-[300px] flex flex-col group"
+                className="cursor-pointer hover:shadow-lg transition-all border-slate-200 overflow-hidden h-[300px] flex flex-col group relative"
                 onClick={() => selectResume(r)}
               >
+                <button
+                  onClick={(e) => handleDeleteResume(e, r.id)}
+                  className="absolute top-2 left-2 z-10 bg-white/90 hover:bg-red-50 p-2 rounded-full text-slate-400 hover:text-red-600 transition-all shadow-md border border-slate-200 group-hover:scale-110"
+                  title="Delete resume"
+                >
+                  <Trash2 size={16} />
+                </button>
                 <div className="h-2/3 bg-slate-50 border-b relative overflow-hidden flex items-start justify-center p-4">
                    <div className="w-full h-full bg-white shadow-sm rounded-t-sm border border-slate-100 p-3 scale-95 origin-top group-hover:scale-100 transition-transform">
                       <div className="h-2 w-1/2 bg-slate-200 mb-2"></div>
@@ -385,9 +495,43 @@ export default function ResumeBuilderPage() {
             <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
                <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                <h3 className="text-lg font-bold text-slate-600">No resumes yet</h3>
-               <p className="text-sm text-slate-400">Click the "Generate New" card to create your first version.</p>
+               <p className="text-sm text-slate-400">Click the "Generate New" or "Tailor to Job" card to create your first version.</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tailor Modal */}
+      {showTailorModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg p-6 space-y-4">
+            <h2 className="text-xl font-bold">Tailor Resume to Job</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold">Job Title (Optional)</label>
+                <Input value={tailoredJobTitle} onChange={(e) => setTailoredJobTitle(e.target.value)} placeholder="e.g. Senior Backend Engineer" />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">Company (Optional)</label>
+                <Input value={tailoredCompany} onChange={(e) => setTailoredCompany(e.target.value)} placeholder="e.g. TechCorp" />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">Job Description</label>
+                <textarea 
+                  className="w-full min-h-[200px] p-3 border rounded-md"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Paste the job description here..."
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setShowTailorModal(false)}>Cancel</Button>
+              <Button onClick={handleTailorResume} disabled={loading}>
+                {loading ? <Loader2 className="animate-spin h-4 w-4" /> : "Tailor Resume"}
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </div>

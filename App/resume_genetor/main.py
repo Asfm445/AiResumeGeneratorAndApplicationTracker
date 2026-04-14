@@ -23,49 +23,53 @@ async def test_generate_resume():
     db = None
     try:
         # Get database session
-        db = await get_db()
+        async for session in get_db():
+            db = session
+            # Create repository with the session
+            repo = SqlAlchemyProfileRepository(db)
+            title_repo = SqlAlchemyTitleRepository(db)
+            skill_repo = SqlAlchemySkillRepository(db)
+            ai_service = AiService()
+            expriance_repo = SqlAlchemyExprianceRepository(db)
+            project_repo = SqlAlchemyProjectRepository(db)
+            embedding_service = GeminiEmbeddingService()
+            
+            # Create use case
+            resume_use_case = ResumeUseCase(profile_repo=repo, ai_service=ai_service, title_repo=title_repo, skill_repo=skill_repo, expriance_repo=expriance_repo, project_repo=project_repo, embedding_service=embedding_service)
+
+
         
-        # Create repository with the session
-        repo = SqlAlchemyProfileRepository(db)
-        title_repo = SqlAlchemyTitleRepository(db)
-        skill_repo = SqlAlchemySkillRepository(db)
-        ai_service = AiService()
-        expriance_repo = SqlAlchemyExprianceRepository(db)
-        project_repo = SqlAlchemyProjectRepository(db)
-        embedding_service = GeminiEmbeddingService()
-        
-        # Create use case
-        resume_use_case = ResumeUseCase(profile_repo=repo, ai_service=ai_service, title_repo=title_repo, skill_repo=skill_repo, expriance_repo=expriance_repo, project_repo=project_repo, embedding_service=embedding_service)
-
-
-      
-        
-        
-        resume = await resume_use_case.generate_resume(user_id)
+            
+            
+            resume = await resume_use_case.generate_resume(user_id)
 
 
 
 
-        print("Professional Summary: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print(resume["professional_summary"])
-        print("Professional Experience: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print(resume["professional_experience"])
-        print("Projects: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print(resume["projects"])
-        print("Skills: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print(resume["skills"])
-        print(type(resume))
-        
-        # print(resume_content)
+            print("Professional Summary: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print(resume["professional_summary"])
+            print("Professional Experience: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print(resume["professional_experience"])
+            print("Projects: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print(resume["projects"])
+            print("Skills: +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print(resume["skills"])
+            print(type(resume))
+            
+            # print(resume_content)
 
-        # tags = await resume_use_case.generate_tags(user_id)
-        # print(tags)
+            # tags = await resume_use_case.generate_tags(user_id)
+            # print(tags)
+
+            # Once we finish using the session, the generator will handle closing it when it exits
+            break
         
     except Exception as e:
         print(f"Error generating resume: {e}")
         raise
     finally:
-        # Ensure database session is closed
+        # Note: If break is used, the generator's context manager should have closed the session.
+        # However, manual closing is still safe if the session object is still around.
         if db:
             await db.close()
 

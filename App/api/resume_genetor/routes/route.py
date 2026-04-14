@@ -47,6 +47,28 @@ async def generate_resume_endpoint(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/tailor")
+async def tailor_resume_endpoint(
+    data: dict, # {"job_description": "...", "title_id": ..., "job_title": "...", "company_name": "..."}
+    user_id: str = Depends(get_current_user_id),
+    resume_use_case: ResumeUseCase = Depends(get_resume_use_case)
+):
+    try:
+        job_description = data.get("job_description")
+        if not job_description:
+            raise HTTPException(status_code=400, detail="Job description is required")
+        
+        title_id = data.get("title_id")
+        job_title = data.get("job_title")
+        company_name = data.get("company_name")
+
+        resume = await resume_use_case.tailor_resume_to_jd(
+            user_id, job_description, title_id, job_title, company_name
+        )
+        return {"data": resume}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/recent")
 async def get_recent_resumes(
     limit: int = 5,
@@ -92,6 +114,22 @@ async def update_resume_endpoint(
         return {"data": updated}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{resume_id}")
+async def delete_resume_endpoint(
+    resume_id: int,
+    user_id: str = Depends(get_current_user_id),
+    resume_use_case: ResumeUseCase = Depends(get_resume_use_case)
+):
+    try:
+        deleted = await resume_use_case.delete_resume(user_id, resume_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        return {"message": "Resume deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

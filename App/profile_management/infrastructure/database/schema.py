@@ -142,6 +142,10 @@ class GeneratedResume(Base):
 
     resume_data = Column(JSON, nullable=False)
     version = Column(Integer, nullable=False)
+    
+    job_description = Column(Text, nullable=True)
+    job_title = Column(String(255), nullable=True)
+    company_name = Column(String(255), nullable=True)
 
     created_at = Column(DateTime, nullable=False)
 

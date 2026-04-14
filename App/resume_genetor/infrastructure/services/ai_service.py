@@ -16,7 +16,7 @@ class AiService(AiServiceInterface):
             temperature=temperature,
             response_mime_type="application/json"
         )
-        self.model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
+        self.model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
     def _strip_code_block_and_whitespace(self, text: str) -> str:
         """Strip markdown code fences, leading/trailing whitespace, and language hints."""
@@ -58,7 +58,12 @@ class AiService(AiServiceInterface):
     async def send_message(self, message: str) -> Any:
         """Send a message to Gemini and return a parsed dict."""
         try:
-            response = self.model.generate_content(message, generation_config=self.generation_config)
+            import asyncio
+            response = await asyncio.to_thread(
+                self.model.generate_content, 
+                message, 
+                generation_config=self.generation_config
+            )
             return json.loads(response.text)
         except json.JSONDecodeError as e:
             raise Exception(f"Gemini returned invalid JSON: {e}\nRaw: {response.text[:200]}")
@@ -119,13 +124,14 @@ class AiService(AiServiceInterface):
             If the target is '{target_title}' but the experience was in a different area (e.g., target is Backend but job was Frontend), 
             focus on integration, performance, logic, and any crossover skills (APIs, data processing, architecture).
             
+            For EACH experience, provide EXACTLY 3-4 bullet points.
             Use strong action verbs and highlight results/impact.
             Return a list of experiences where each experience matches this JSON format:
             {{
               "job_title": "Position Name",
               "company": "Company Name",
               "dates": "Month Year - Month Year (or Present)",
-              "responsibilities": ["Bullet point 1", "Bullet point 2"]
+              "responsibilities": ["Bullet point 1", "Bullet point 2", "Bullet point 3", "Bullet point 4"]
             }}
             
             Return JSON in this format:
@@ -149,6 +155,7 @@ class AiService(AiServiceInterface):
             For example, if the target is Backend but the project is a React app, emphasize the state management logic, 
             API consumption, performance optimizations, or any architectural decisions rather than just UI/UX.
             
+            For EACH project, provide EXACTLY 3-4 bullet points in the description.
             Highlight role, tech stack, and outcomes.
             Return a list of projects where each project matches this JSON format:
             {{
@@ -156,7 +163,7 @@ class AiService(AiServiceInterface):
               "role": "Your Role",
               "dates": "Start - End",
               "technologies": ["Tech 1", "Tech 2"],
-              "description": ["Bullet point 1", "Bullet point 2"]
+              "description": ["Bullet point 1", "Bullet point 2", "Bullet point 3", "Bullet point 4"]
             }}
             
             Return JSON in this format:
@@ -185,6 +192,31 @@ class AiService(AiServiceInterface):
             """
         result = await self.send_message(prompt)
         return result if isinstance(result, dict) else {}
+
+    async def tailor_resume_to_jd(self, profile_data: Dict, job_description: str) -> Dict[str, Any]:
+        prompt = f"""
+            You are a professional AI Resume Strategist. 
+            Tailor the following profile data perfectly to this **Job Description**:
+            
+            JOB DESCRIPTION:
+            {job_description}
+            
+            PROFILE DATA:
+            {json.dumps(profile_data, indent=2)}
+            
+            CRITICAL INSTRUCTIONS:
+            1. **Headline:** Generate an impactful headline specifically matching the job title and core requirements in the JD.
+            2. **Summary:** Write a 3-4 line summary highlighting the user's skills and projects that directly address the "Must-have" and "Preferred" requirements of the JD.
+            3. **Experience:** Rephrase bullet points to emphasize impact and technologies requested in the JD. Use the JD's terminology where appropriate. For EACH experience, provide EXACTLY 3-4 bullet points.
+            4. **Projects:** Select and highlight projects that demonstrate the specific technical competencies required for this role. For EACH project, provide EXACTLY 3-4 bullet points in the description.
+            5. **Skills:** Categorize and prioritize skills that are mentioned or highly relevant to the JD.
+            
+            Return the FULL tailored resume in JSON format with these exact keys:
+            "headline", "professional_summary", "professional_experience", "projects", "skills".
+            
+            Keep the output strictly in the requested JSON format.
+            """
+        return await self.send_message(prompt)
 
     async def generate_resume(self, profile_data: Dict) -> Any:
         title = profile_data.get("title", "Professional")
@@ -220,6 +252,8 @@ class AiService(AiServiceInterface):
             
             CRITICAL INSTRUCTION: Apply the user's feedback carefully across all relevant sections. 
             Maintain the overall structure and quality.
+            For EVERY experience and project, ensure there are EXACTLY 3-4 bullet points.
+            
             Return the FULL updated resume in JSON format with these exact keys:
             "headline", "professional_summary", "professional_experience", "projects", "skills".
             

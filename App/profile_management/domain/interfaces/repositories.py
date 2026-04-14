@@ -161,3 +161,7 @@ class ResumeRepository(ABC):
     @abstractmethod
     async def get_latest_version(self, title_id: int) -> int:
         pass
+
+    @abstractmethod
+    async def delete(self, resume_id: int, user_id: str) -> bool:
+        pass

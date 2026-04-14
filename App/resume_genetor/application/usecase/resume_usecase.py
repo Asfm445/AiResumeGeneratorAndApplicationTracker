@@ -25,8 +25,7 @@ class ResumeUseCase:
         self.embedding_service = embedding_service
         self.resume_repo = resume_repo
 
-    async def generate_resume(self, user_id: str, title_id: Optional[int] = None) -> dict:
-        
+    async def _get_resume_input_data(self, user_id: str, title_id: Optional[int] = None) -> dict:
         # Fetch user profile and related data
         profile = await self.profile_repo.get_by_user_id(user_id)
         if not profile:
@@ -45,10 +44,6 @@ class ResumeUseCase:
             # Fallback to highest priority title
             titles.sort(key=lambda t: t.priority, reverse=True)
             target_title_obj = titles[0]
-
-        print("++++++++++++++++++++++++++++++++++++++++++++++++title here+++++++++++++++++++++")
-        print(target_title_obj)
-        
 
         if not target_title_obj:
             target_title = "Professional"
@@ -69,30 +64,40 @@ class ResumeUseCase:
         expriances = await self.expriance_repo.get_all(user_id)
 
         # Prepare data for AI sections
-        ai_input_data = {
-            "title": target_title,
-            "title_description": target_title_obj.description if target_title_obj else "",
-            "headline": profile.headline,
-            "bio": profile.about_text,
-            "skills": [{"skill_type": s.skill_type, "skills": s.skills} for s in skills],
-            "projects": [
-                {
-                    "name": p.name,
-                    "short_description": p.short_description,
-                    "project_description": [pd.text for pd in p.project_description]
-                } for p in projects
-            ],
-            "expriances": [
-                {
-                    "company_name": e.company_name,
-                    "role_title": e.role_title,
-                    "start_date": e.start_date.strftime("%Y-%m") if e.start_date else "",
-                    "end_date": e.end_date.strftime("%Y-%m") if e.end_date else "Present",
-                    "short_description": e.short_description,
-                    "tech_stack": e.tech_stack
-                } for e in expriances
-            ]
+        return {
+            "profile": profile,
+            "target_title_obj": target_title_obj,
+            "ai_input_data": {
+                "title": target_title,
+                "title_description": target_title_obj.description if target_title_obj else "",
+                "headline": profile.headline,
+                "bio": profile.about_text,
+                "skills": [{"skill_type": s.skill_type, "skills": s.skills} for s in skills],
+                "projects": [
+                    {
+                        "name": p.name,
+                        "short_description": p.short_description,
+                        "project_description": [pd.text for pd in p.project_description]
+                    } for p in projects
+                ],
+                "expriances": [
+                    {
+                        "company_name": e.company_name,
+                        "role_title": e.role_title,
+                        "start_date": e.start_date.strftime("%Y-%m") if e.start_date else "",
+                        "end_date": e.end_date.strftime("%Y-%m") if e.end_date else "Present",
+                        "short_description": e.short_description,
+                        "tech_stack": e.tech_stack
+                    } for e in expriances
+                ]
+            }
         }
+
+    async def generate_resume(self, user_id: str, title_id: Optional[int] = None) -> dict:
+        data = await self._get_resume_input_data(user_id, title_id)
+        profile = data["profile"]
+        target_title_obj = data["target_title_obj"]
+        ai_input_data = data["ai_input_data"]
 
         # Generate AI parts
         ai_generated_resume = await self.ai_service.generate_resume(ai_input_data)
@@ -116,8 +121,48 @@ class ResumeUseCase:
                 resume_data=full_resume,
                 version=new_version
             )
-            await self.resume_repo.save(generated_resume_entity)
+            saved = await self.resume_repo.save(generated_resume_entity)
+            full_resume["id"] = saved.id
             full_resume["version"] = new_version
+        
+        return full_resume
+
+    async def tailor_resume_to_jd(self, user_id: str, job_description: str, title_id: Optional[int] = None, job_title: Optional[str] = None, company_name: Optional[str] = None) -> dict:
+        data = await self._get_resume_input_data(user_id, title_id)
+        profile = data["profile"]
+        target_title_obj = data["target_title_obj"]
+        ai_input_data = data["ai_input_data"]
+
+        # Tailor via AI
+        tailored_data = await self.ai_service.tailor_resume_to_jd(ai_input_data, job_description)
+
+        # Combine with static profile data
+        full_resume = {
+            "name": profile.name,
+            "email": profile.email,
+            "location": profile.location,
+            **tailored_data
+        }
+
+        # Save as new version
+        if target_title_obj:
+            latest_version = await self.resume_repo.get_latest_version(target_title_obj.id)
+            new_version = latest_version + 1
+            
+            generated_resume_entity = GeneratedResume(
+                user_id=user_id,
+                title_id=target_title_obj.id,
+                resume_data=full_resume,
+                version=new_version,
+                job_description=job_description,
+                job_title=job_title,
+                company_name=company_name
+            )
+            saved = await self.resume_repo.save(generated_resume_entity)
+            full_resume["id"] = saved.id
+            full_resume["version"] = new_version
+            full_resume["job_title"] = job_title
+            full_resume["company_name"] = company_name
         
         return full_resume
 
@@ -163,6 +208,9 @@ class ResumeUseCase:
         saved_resume = await self.resume_repo.save(new_resume_entity)
 
         return {**updated_data, "id": saved_resume.id, "version": saved_resume.version}
+
+    async def delete_resume(self, user_id: str, resume_id: int) -> bool:
+        return await self.resume_repo.delete(resume_id, user_id)
 
     async def generate_tags(self, user_id: str, title_id: Optional[int] = None) -> str:
         titles = await self.title_repo.get_all(user_id)

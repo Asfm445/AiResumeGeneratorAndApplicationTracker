@@ -39,7 +39,8 @@ async def get_db():
             async with AsyncSessionLocal() as session:
                 # test the connection
                 await session.execute(text("SELECT 1"))
-                return session
+                yield session
+                return
         except OperationalError:
             if attempt < max_retries - 1:
                 logger.warning(f"DB not ready, retrying in {delay_seconds}s... (attempt {attempt+1})")

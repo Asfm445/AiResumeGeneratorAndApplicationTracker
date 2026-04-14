@@ -552,6 +552,9 @@ class SqlAlchemyResumeRepository(ResumeRepository):
             title_id=resume.title_id,
             resume_data=resume.resume_data,
             version=resume.version,
+            job_description=resume.job_description,
+            job_title=resume.job_title,
+            company_name=resume.company_name,
             created_at=datetime.utcnow()
         )
         self.session.add(db_resume)
@@ -585,6 +588,16 @@ class SqlAlchemyResumeRepository(ResumeRepository):
         latest_version = result.scalar()
         return latest_version if latest_version is not None else 0
 
+    async def delete(self, resume_id: int, user_id: str) -> bool:
+        stmt = select(DBGeneratedResume).filter_by(id=resume_id, user_id=user_id)
+        result = await self.session.execute(stmt)
+        db_resume = result.scalars().first()
+        if db_resume:
+            await self.session.delete(db_resume)
+            await self.session.commit()
+            return True
+        return False
+
     def _to_domain(self, db_resume: DBGeneratedResume) -> GeneratedResume:
         return GeneratedResume(
             id=db_resume.id,
@@ -592,5 +605,8 @@ class SqlAlchemyResumeRepository(ResumeRepository):
             title_id=db_resume.title_id,
             resume_data=db_resume.resume_data,
             version=db_resume.version,
+            job_description=db_resume.job_description,
+            job_title=db_resume.job_title,
+            company_name=db_resume.company_name,
             created_at=db_resume.created_at
         )
