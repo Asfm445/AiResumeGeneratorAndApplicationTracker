@@ -133,22 +133,38 @@ class Skill(Base):
     created_at = Column(DateTime, nullable=False)
 
 
+class Job(Base):
+    __tablename__ = "jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(255), nullable=False, index=True)
+
+    job_title = Column(String(255), nullable=False)
+    company_name = Column(String(255), nullable=False)
+    job_description = Column(Text, nullable=False)
+    url = Column(String(255), nullable=True)
+    location = Column(String(255), nullable=True)
+
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+    resumes = relationship("GeneratedResume", back_populates="job")
+
+
 class GeneratedResume(Base):
     __tablename__ = "generated_resumes"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(255), nullable=False, index=True)
-    title_id = Column(Integer, ForeignKey('titles.id'), nullable=False)
+    title_id = Column(Integer, ForeignKey('titles.id'), nullable=True)
+    job_id = Column(Integer, ForeignKey('jobs.id'), nullable=True)
 
     resume_data = Column(JSON, nullable=False)
     version = Column(Integer, nullable=False)
     
-    job_description = Column(Text, nullable=True)
-    job_title = Column(String(255), nullable=True)
-    company_name = Column(String(255), nullable=True)
-
     created_at = Column(DateTime, nullable=False)
 
     title = relationship("Title", back_populates="resumes")
+    job = relationship("Job", back_populates="resumes")
 
 

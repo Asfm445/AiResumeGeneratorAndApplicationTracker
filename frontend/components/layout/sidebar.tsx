@@ -26,6 +26,7 @@ const items = [
   { label: "Skills", icon: Wrench, href: "/skills" },
   { label: "Projects", icon: FolderKanban, href: "/projects" },
   { label: "Titles", icon: Trophy, href: "/titles" },
+  { label: "Jobs", icon: Briefcase, href: "/jobs" },
   { label: "Resume Builder", icon: FileText, href: "/resume-builder" },
 ];
 

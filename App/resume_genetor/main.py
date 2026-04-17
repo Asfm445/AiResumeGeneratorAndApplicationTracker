@@ -1,5 +1,12 @@
 from App.resume_genetor.application.usecase.resume_usecase import ResumeUseCase
-from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository
+from App.profile_management.infrastructure.repositories.sql_repositories import (SqlAlchemyProfileRepository, 
+SqlAlchemyTitleRepository, 
+SqlAlchemySkillRepository, 
+SqlAlchemyProjectRepository, 
+SqlAlchemyExprianceRepository, 
+SqlAlchemyResumeRepository,
+SqlAlchemyJobRepository
+)
 from App.profile_management.infrastructure.database.database import get_db
 from App.resume_genetor.infrastructure.services.ai_service import AiService
 from App.resume_genetor.infrastructure.services.embedding_service import GeminiEmbeddingService
@@ -10,13 +17,13 @@ import asyncio
 
 load_dotenv()
 
-# token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGQzZWM1Mi1mM2ZhLTRkZDYtYmQ0MS02Y2MxOWY2ZWRiMzYiLCJyb2xlcyI6WyJidXllciIsInNlbGxlciJdLCJyb2xlIjoiYnV5ZXIiLCJpYXQiOjE3NzQ5NTU0MjEsImV4cCI6MTc3NDk1NjMyMX0.8VJyDEMBa3onQwQvi9zNgzQd9SnRtwDVvvFBX3m7JTM"
+# token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1YjIxNGM3OC1hMjMyLTQxNTYtOTQ5ZC00ZGI4OTQyODY3OGMiLCJyb2xlcyI6WyJidXllciJdLCJleHAiOjE3NzY0MDk4Mjl9.poGrz-UQ2xp5VW8k6C7QA3vV078IShrLUOfTfFWUhVE"
 
 # SECRET_KEY = os.getenv("SECRET_KEY")
 # ALGORITHM = "HS256"
 
 # payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-user_id: str = "64d3ec52-f3fa-4dd6-bd41-6cc19f6edb36"
+user_id: str = "5b214c78-a232-4156-949d-4db89428678c"
 
 
 async def test_generate_resume():
@@ -33,15 +40,27 @@ async def test_generate_resume():
             expriance_repo = SqlAlchemyExprianceRepository(db)
             project_repo = SqlAlchemyProjectRepository(db)
             embedding_service = GeminiEmbeddingService()
+            resume_repo = SqlAlchemyResumeRepository(db)
+            job_repo = SqlAlchemyJobRepository(db)
             
             # Create use case
-            resume_use_case = ResumeUseCase(profile_repo=repo, ai_service=ai_service, title_repo=title_repo, skill_repo=skill_repo, expriance_repo=expriance_repo, project_repo=project_repo, embedding_service=embedding_service)
+            resume_use_case = ResumeUseCase(profile_repo=repo, 
+            ai_service=ai_service, 
+            title_repo=title_repo, 
+            skill_repo=skill_repo, 
+            expriance_repo=expriance_repo, 
+            project_repo=project_repo, 
+            embedding_service=embedding_service, 
+            resume_repo=resume_repo, 
+            job_repo=job_repo)
 
 
         
             
-            
-            resume = await resume_use_case.generate_resume(user_id)
+            resume=await resume_use_case.tailor_resume_to_jd(user_id, 1)
+
+
+            # resume = await resume_use_case.generate_resume(user_id)
 
 
 

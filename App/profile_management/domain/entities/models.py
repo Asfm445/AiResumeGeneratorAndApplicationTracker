@@ -91,13 +91,23 @@ class Skill:
     id: Optional[int] = None
 
 @dataclass
+class Job:
+    user_id: str
+    job_title: str
+    company_name: str
+    job_description: str
+    url: Optional[str] = None
+    location: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    id: Optional[int] = None
+
+@dataclass
 class GeneratedResume:
     user_id: str
-    title_id: int
     resume_data: dict
     version: int
-    job_description: Optional[str] = None
-    job_title: Optional[str] = None
-    company_name: Optional[str] = None
+    title_id: Optional[int] = None
+    job_id: Optional[int] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     id: Optional[int] = None

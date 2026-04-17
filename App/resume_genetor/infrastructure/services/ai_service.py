@@ -16,7 +16,7 @@ class AiService(AiServiceInterface):
             temperature=temperature,
             response_mime_type="application/json"
         )
-        self.model = genai.GenerativeModel('gemini-2.5-flash-lite')
+        self.model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
 
     def _strip_code_block_and_whitespace(self, text: str) -> str:
         """Strip markdown code fences, leading/trailing whitespace, and language hints."""
@@ -193,11 +193,15 @@ class AiService(AiServiceInterface):
         result = await self.send_message(prompt)
         return result if isinstance(result, dict) else {}
 
-    async def tailor_resume_to_jd(self, profile_data: Dict, job_description: str) -> Dict[str, Any]:
+    async def tailor_resume_to_jd(self, profile_data: Dict, job_description: str, job_title: Optional[str] = None, company_name: Optional[str] = None) -> Dict[str, Any]:
+        job_info = f"JOB TITLE: {job_title}\n" if job_title else ""
+        job_info += f"COMPANY NAME: {company_name}\n" if company_name else ""
+        
         prompt = f"""
             You are a professional AI Resume Strategist. 
-            Tailor the following profile data perfectly to this **Job Description**:
+            Tailor the following profile data perfectly to this position:
             
+            {job_info}
             JOB DESCRIPTION:
             {job_description}
             

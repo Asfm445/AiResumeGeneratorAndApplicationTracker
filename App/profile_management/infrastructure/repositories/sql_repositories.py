@@ -2,10 +2,83 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, func, update
 from sqlalchemy.orm import selectinload
-from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill, GeneratedResume
-from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository, ResumeRepository
-from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill, GeneratedResume as DBGeneratedResume
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill, GeneratedResume, Job
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository, ResumeRepository, JobRepository
+from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill, GeneratedResume as DBGeneratedResume, Job as DBJob
 from datetime import datetime
+
+class SqlAlchemyJobRepository(JobRepository):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(self, job: Job) -> Job:
+        db_job = DBJob(
+            user_id=job.user_id,
+            job_title=job.job_title,
+            company_name=job.company_name,
+            job_description=job.job_description,
+            url=job.url,
+            location=job.location,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        self.session.add(db_job)
+        await self.session.commit()
+        await self.session.refresh(db_job)
+        return self._to_domain(db_job)
+
+    async def get_by_id(self, job_id: int) -> Optional[Job]:
+        stmt = select(DBJob).filter_by(id=job_id)
+        result = await self.session.execute(stmt)
+        db_job = result.scalars().first()
+        if db_job:
+            return self._to_domain(db_job)
+        return None
+
+    async def get_all(self, user_id: str) -> List[Job]:
+        stmt = select(DBJob).filter_by(user_id=user_id).order_by(DBJob.created_at.desc())
+        result = await self.session.execute(stmt)
+        db_jobs = result.scalars().all()
+        return [self._to_domain(j) for j in db_jobs]
+
+    async def update(self, job: Job) -> Optional[Job]:
+        stmt = select(DBJob).filter_by(id=job.id, user_id=job.user_id)
+        result = await self.session.execute(stmt)
+        db_job = result.scalars().first()
+        if db_job:
+            db_job.job_title = job.job_title
+            db_job.company_name = job.company_name
+            db_job.job_description = job.job_description
+            db_job.url = job.url
+            db_job.location = job.location
+            db_job.updated_at = datetime.utcnow()
+            await self.session.commit()
+            await self.session.refresh(db_job)
+            return self._to_domain(db_job)
+        return None
+
+    async def delete(self, job_id: int, user_id: str) -> bool:
+        stmt = select(DBJob).filter_by(id=job_id, user_id=user_id)
+        result = await self.session.execute(stmt)
+        db_job = result.scalars().first()
+        if db_job:
+            await self.session.delete(db_job)
+            await self.session.commit()
+            return True
+        return False
+
+    def _to_domain(self, db_job: DBJob) -> Job:
+        return Job(
+            id=db_job.id,
+            user_id=db_job.user_id,
+            job_title=db_job.job_title,
+            company_name=db_job.company_name,
+            job_description=db_job.job_description,
+            url=db_job.url,
+            location=db_job.location,
+            created_at=db_job.created_at,
+            updated_at=db_job.updated_at
+        )
 
 class SqlAlchemyProfileRepository(ProfileRepository):
     def __init__(self, session: AsyncSession):
@@ -552,9 +625,7 @@ class SqlAlchemyResumeRepository(ResumeRepository):
             title_id=resume.title_id,
             resume_data=resume.resume_data,
             version=resume.version,
-            job_description=resume.job_description,
-            job_title=resume.job_title,
-            company_name=resume.company_name,
+            job_id=resume.job_id,
             created_at=datetime.utcnow()
         )
         self.session.add(db_resume)
@@ -576,14 +647,26 @@ class SqlAlchemyResumeRepository(ResumeRepository):
         db_resumes = result.scalars().all()
         return [self._to_domain(r) for r in db_resumes]
 
+    async def get_all_by_job(self, job_id: int) -> List[GeneratedResume]:
+        stmt = select(DBGeneratedResume).filter_by(job_id=job_id).order_by(DBGeneratedResume.version.desc())
+        result = await self.session.execute(stmt)
+        db_resumes = result.scalars().all()
+        return [self._to_domain(r) for r in db_resumes]
+
     async def get_recent(self, user_id: str, limit: int = 5) -> List[GeneratedResume]:
         stmt = select(DBGeneratedResume).filter_by(user_id=user_id).order_by(DBGeneratedResume.created_at.desc()).limit(limit)
         result = await self.session.execute(stmt)
         db_resumes = result.scalars().all()
         return [self._to_domain(r) for r in db_resumes]
 
-    async def get_latest_version(self, title_id: int) -> int:
+    async def get_latest_version_by_title(self, title_id: int) -> int:
         stmt = select(func.max(DBGeneratedResume.version)).filter_by(title_id=title_id)
+        result = await self.session.execute(stmt)
+        latest_version = result.scalar()
+        return latest_version if latest_version is not None else 0
+
+    async def get_latest_version_by_job(self, job_id: int) -> int:
+        stmt = select(func.max(DBGeneratedResume.version)).filter_by(job_id=job_id)
         result = await self.session.execute(stmt)
         latest_version = result.scalar()
         return latest_version if latest_version is not None else 0
@@ -605,8 +688,6 @@ class SqlAlchemyResumeRepository(ResumeRepository):
             title_id=db_resume.title_id,
             resume_data=db_resume.resume_data,
             version=db_resume.version,
-            job_description=db_resume.job_description,
-            job_title=db_resume.job_title,
-            company_name=db_resume.company_name,
+            job_id=db_resume.job_id,
             created_at=db_resume.created_at
         )

@@ -47,7 +47,7 @@ class AiServiceInterface(ABC):
         pass
 
     @abstractmethod
-    async def tailor_resume_to_jd(self, profile_data: Dict, job_description: str) -> Dict[str, Any]:
+    async def tailor_resume_to_jd(self, profile_data: Dict, job_description: str, job_title: Optional[str] = None, company_name: Optional[str] = None) -> Dict[str, Any]:
         """Tailor a resume to a specific job description."""
         pass
 

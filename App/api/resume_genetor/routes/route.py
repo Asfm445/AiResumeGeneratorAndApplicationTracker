@@ -1,11 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 from App.profile_management.infrastructure.database.database import get_db
 from App.api.auth import get_current_user_id
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from App.resume_genetor.application.usecase.resume_usecase import ResumeUseCase
-from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository, SqlAlchemyResumeRepository
+
+class TailorResumeRequest(BaseModel):
+    job_id: Optional[int] = None
+    # Optional fields if user wants to tailor without a saved job ID (one-off)
+    job_description: Optional[str] = None
+    job_title: Optional[str] = None
+    company_name: Optional[str] = None
+    # Optional selection of which professional profile (Title) to use as base
+    title_id: Optional[int] = None
+
+class RefineResumeRequest(BaseModel):
+    comment: str
+
+class UpdateResumeRequest(BaseModel):
+    resume_data: Dict[str, Any]
+
+from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository, SqlAlchemyResumeRepository, SqlAlchemyJobRepository
 from App.resume_genetor.infrastructure.services.ai_service import AiService
 from App.resume_genetor.infrastructure.services.embedding_service import GeminiEmbeddingService
 
@@ -21,6 +38,7 @@ def get_resume_use_case(db: AsyncSession = Depends(get_db)):
     expriance_repo = SqlAlchemyExprianceRepository(db)
     project_repo = SqlAlchemyProjectRepository(db)
     resume_repo = SqlAlchemyResumeRepository(db)
+    job_repo = SqlAlchemyJobRepository(db)
     ai_service = AiService()
     embedding_service = GeminiEmbeddingService()
 
@@ -32,7 +50,8 @@ def get_resume_use_case(db: AsyncSession = Depends(get_db)):
         project_repo=project_repo,
         ai_service=ai_service,
         embedding_service=embedding_service,
-        resume_repo=resume_repo
+        resume_repo=resume_repo,
+        job_repo=job_repo
     )
 
 @router.get("/generate")
@@ -49,23 +68,19 @@ async def generate_resume_endpoint(
 
 @router.post("/tailor")
 async def tailor_resume_endpoint(
-    data: dict, # {"job_description": "...", "title_id": ..., "job_title": "...", "company_name": "..."}
+    request: TailorResumeRequest,
     user_id: str = Depends(get_current_user_id),
     resume_use_case: ResumeUseCase = Depends(get_resume_use_case)
 ):
     try:
-        job_description = data.get("job_description")
-        if not job_description:
-            raise HTTPException(status_code=400, detail="Job description is required")
         
-        title_id = data.get("title_id")
-        job_title = data.get("job_title")
-        company_name = data.get("company_name")
-
         resume = await resume_use_case.tailor_resume_to_jd(
-            user_id, job_description, title_id, job_title, company_name
+            user_id,
+            job_id=request.job_id
         )
         return {"data": resume}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -84,15 +99,12 @@ async def get_recent_resumes(
 @router.post("/refine/{resume_id}")
 async def refine_resume_endpoint(
     resume_id: int,
-    data: dict, # {"comment": "..."}
+    request: RefineResumeRequest,
     user_id: str = Depends(get_current_user_id),
     resume_use_case: ResumeUseCase = Depends(get_resume_use_case)
 ):
     try:
-        comment = data.get("comment")
-        if not comment:
-            raise HTTPException(status_code=400, detail="Comment is required")
-        refined = await resume_use_case.refine_resume(user_id, resume_id, comment)
+        refined = await resume_use_case.refine_resume(user_id, resume_id, request.comment)
         return {"data": refined}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -144,6 +156,20 @@ async def get_resume_history(
         # Security check: ensure resumes belong to the user
         user_resumes = [r for r in resumes if r.user_id == user_id]
         return {"data": user_resumes}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/job/{job_id}")
+async def get_resumes_by_job(
+    job_id: int,
+    user_id: str = Depends(get_current_user_id),
+    resume_use_case: ResumeUseCase = Depends(get_resume_use_case)
+):
+    try:
+        resumes = await resume_use_case.get_resumes_by_job_id(user_id, job_id)
+        return {"data": resumes}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

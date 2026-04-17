@@ -122,39 +122,57 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
       <section className="mb-8">
         <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-4 font-sans pb-1 tracking-widest">Professional Experience</h2>
         <div className="space-y-6">
-          {(data?.professional_experience || []).map((exp, i) => (
-            <div key={i}>
-              <div className="flex justify-between items-baseline mb-1">
+          {(data?.professional_experience || []).map((exp, i) => {
+            const title = exp.job_title || exp.role_title || exp.position || exp.role || exp.title;
+            const company = exp.company || exp.company_name || exp.organization;
+            const dates = exp.dates || (exp.start_date && exp.end_date ? `${exp.start_date} - ${exp.end_date}` : exp.start_date || exp.end_date);
+            const stack = exp.technologies || exp.tech_stack || exp.stack || exp.tools;
+            const points = exp.bullet_points || exp.responsibilities || exp.achievements || exp.short_description || exp.description || exp.highlights;
+
+            return (
+              <div key={i}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <Input 
+                      value={title} 
+                      onChange={(v: string) => handleListChange('professional_experience', i, 'job_title', v)} 
+                      className="font-bold text-md text-[#0f172a]" 
+                  />
+                  <Input 
+                      value={dates} 
+                      onChange={(v: string) => handleListChange('professional_experience', i, 'dates', v)} 
+                      className="text-xs font-sans text-[#6b7280] font-bold italic uppercase" 
+                  />
+                </div>
                 <Input 
-                    value={exp.job_title || exp.position || exp.role_title} 
-                    onChange={(v: string) => handleListChange('professional_experience', i, 'job_title', v)} 
-                    className="font-bold text-md text-[#0f172a]" 
+                  value={company} 
+                  onChange={(v: string) => handleListChange('professional_experience', i, 'company', v)} 
+                  className="font-bold text-sm text-[#1e1b4b] mb-2 font-sans tracking-tight uppercase block" 
                 />
-                <Input 
-                    value={exp.dates || `${exp.start_date || ''} - ${exp.end_date || ''}`} 
-                    onChange={(v: string) => handleListChange('professional_experience', i, 'dates', v)} 
-                    className="text-xs font-sans text-[#6b7280] font-bold italic uppercase" 
-                />
+                {(stack || isEditable) && (
+                  <div className="flex items-center gap-2 mb-2 italic font-serif text-[10px] text-[#6b7280]">
+                      <span>Stack:</span>
+                      <Input 
+                        value={Array.isArray(stack) ? stack.join(' • ') : stack} 
+                        onChange={(v: string) => handleListChange('professional_experience', i, 'technologies', v.split(' • '))} 
+                        className="w-full"
+                      />
+                  </div>
+                )}
+                {isEditable ? (
+                  <TextArea 
+                    value={ensureArray(points).join('\n')} 
+                    onChange={(v: string) => handleListChange('professional_experience', i, 'responsibilities', v)} 
+                    className="text-[#374151] text-sm" 
+                  />
+                ) : (
+                  <BulletPoints 
+                    points={ensureArray(points)} 
+                    className="text-[#374151] text-sm mt-2" 
+                  />
+                )}
               </div>
-              <Input 
-                value={exp.company || exp.company_name} 
-                onChange={(v: string) => handleListChange('professional_experience', i, 'company', v)} 
-                className="font-bold text-sm text-[#1e1b4b] mb-2 font-sans tracking-tight uppercase block" 
-              />
-              {isEditable ? (
-                <TextArea 
-                  value={ensureArray(exp.responsibilities || exp.achievements || exp.short_description || exp.description).join('\n')} 
-                  onChange={(v: string) => handleListChange('professional_experience', i, 'responsibilities', v)} 
-                  className="text-[#374151] text-sm" 
-                />
-              ) : (
-                <BulletPoints 
-                  points={ensureArray(exp.responsibilities || exp.achievements || exp.short_description || exp.description)} 
-                  className="text-[#374151] text-sm mt-2" 
-                />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -162,52 +180,64 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
       <section className="mb-8 font-sans">
         <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-4 pb-1 tracking-widest">Projects</h2>
         <div className="space-y-6">
-          {(data?.projects || []).map((proj, i) => (
-            <div key={i}>
-              <div className="flex justify-between items-baseline mb-1">
-                <Input 
-                    value={proj.project_name || proj.name} 
-                    onChange={(v: string) => handleListChange('projects', i, 'project_name', v)} 
-                    className="font-bold text-sm text-[#0f172a]" 
-                />
-                <Input 
-                    value={proj.dates} 
-                    onChange={(v: string) => handleListChange('projects', i, 'dates', v)} 
-                    className="text-xs text-[#6b7280] italic font-serif uppercase tracking-tighter" 
-                />
-              </div>
-              <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] text-[#4338ca] font-bold uppercase tracking-widest">ROLE:</span>
-                  <Input 
-                    value={proj.role} 
-                    onChange={(v: string) => handleListChange('projects', i, 'role', v)} 
-                    className="text-[10px] text-[#4338ca] font-bold uppercase tracking-widest" 
-                  />
-              </div>
-              
-              <div className="flex items-center gap-2 mb-2 italic font-serif text-[10px] text-[#6b7280]">
-                  <span>Stack:</span>
-                  <Input 
-                    value={Array.isArray(proj.technologies) ? proj.technologies.join(' • ') : proj.technologies} 
-                    onChange={(v: string) => handleListChange('projects', i, 'technologies', v.split(' • '))} 
-                    className="w-full"
-                  />
-              </div>
+          {(data?.projects || []).map((proj, i) => {
+            const title = proj.project_name || proj.name || proj.title;
+            const role = proj.role || proj.job_title || proj.position;
+            const dates = proj.dates || (proj.start_date && proj.end_date ? `${proj.start_date} - ${proj.end_date}` : proj.start_date || proj.end_date);
+            const stack = proj.technologies || proj.tech_stack || proj.stack || proj.tools;
+            const points = proj.bullet_points || proj.description || proj.key_achievements || proj.achievements || proj.highlights || proj.short_description;
 
-              {isEditable ? (
-                <TextArea 
-                  value={ensureArray(proj.key_achievements || proj.achievements || proj.highlights || proj.short_description || proj.description).join('\n')} 
-                  onChange={(v: string) => handleListChange('projects', i, 'description', v)} 
-                  className="text-[#374151] text-sm font-serif" 
-                />
-              ) : (
-                <BulletPoints 
-                  points={ensureArray(proj.key_achievements || proj.achievements || proj.highlights || proj.short_description || proj.description)} 
-                  className="text-[#374151] text-sm font-serif mt-2" 
-                />
-              )}
-            </div>
-          ))}
+            return (
+              <div key={i}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <Input 
+                      value={title} 
+                      onChange={(v: string) => handleListChange('projects', i, 'project_name', v)} 
+                      className="font-bold text-sm text-[#0f172a]" 
+                  />
+                  <Input 
+                      value={dates} 
+                      onChange={(v: string) => handleListChange('projects', i, 'dates', v)} 
+                      className="text-xs text-[#6b7280] italic font-serif uppercase tracking-tighter" 
+                  />
+                </div>
+                {(role || isEditable) && (
+                  <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] text-[#4338ca] font-bold uppercase tracking-widest">ROLE:</span>
+                      <Input 
+                        value={role} 
+                        onChange={(v: string) => handleListChange('projects', i, 'role', v)} 
+                        className="text-[10px] text-[#4338ca] font-bold uppercase tracking-widest" 
+                      />
+                  </div>
+                )}
+                
+                {(stack || isEditable) && (
+                  <div className="flex items-center gap-2 mb-2 italic font-serif text-[10px] text-[#6b7280]">
+                      <span>Stack:</span>
+                      <Input 
+                        value={Array.isArray(stack) ? stack.join(' • ') : stack} 
+                        onChange={(v: string) => handleListChange('projects', i, 'technologies', v.split(' • '))} 
+                        className="w-full"
+                      />
+                  </div>
+                )}
+
+                {isEditable ? (
+                  <TextArea 
+                    value={ensureArray(points).join('\n')} 
+                    onChange={(v: string) => handleListChange('projects', i, 'description', v)} 
+                    className="text-[#374151] text-sm font-serif" 
+                  />
+                ) : (
+                  <BulletPoints 
+                    points={ensureArray(points)} 
+                    className="text-[#374151] text-sm font-serif mt-2" 
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 

@@ -6,9 +6,39 @@ from App.profile_management.application.use_cases.project_use_cases import Creat
 from App.profile_management.application.use_cases.tag_use_cases import CreateTagUseCase, ListTagsUseCase
 from App.profile_management.application.use_cases.experience_use_cases import CreateExprianceUseCase, UpdateExprianceUseCase, ListExpriancesUseCase, GetExprianceUseCase, DeleteExprianceUseCase
 from App.profile_management.application.use_cases.skill_use_cases import CreateSkillUseCase, UpdateSkillUseCase, ListSkillsUseCase, GetSkillUseCase, DeleteSkillUseCase
+from App.profile_management.application.use_cases.job_use_cases import JobUseCase
+from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository, SqlAlchemyJobRepository
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+
+class JobCreate(BaseModel):
+    job_title: str
+    company_name: str
+    job_description: str
+    url: Optional[str] = None
+    location: Optional[str] = None
+
+class JobUpdate(BaseModel):
+    job_title: Optional[str] = None
+    company_name: Optional[str] = None
+    job_description: Optional[str] = None
+    url: Optional[str] = None
+    location: Optional[str] = None
+
+class JobResponse(BaseModel):
+    id: int
+    user_id: str
+    job_title: str
+    company_name: str
+    job_description: str
+    url: Optional[str] = None
+    location: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 class ExprianceCreate(BaseModel):
     company_name: str
@@ -130,6 +160,7 @@ class ProfileController:
         tag_repo = SqlAlchemyTagRepository(db)
         expriance_repo = SqlAlchemyExprianceRepository(db)
         skill_repo = SqlAlchemySkillRepository(db)
+        job_repo = SqlAlchemyJobRepository(db)
         
         # Use Cases
         self.create_profile_uc = CreateOrUpdateProfileUseCase(profile_repo)
@@ -160,6 +191,46 @@ class ProfileController:
         self.list_skills_uc = ListSkillsUseCase(skill_repo)
         self.get_skill_uc = GetSkillUseCase(skill_repo)
         self.delete_skill_uc = DeleteSkillUseCase(skill_repo)
+
+        self.job_uc = JobUseCase(job_repo)
+
+    async def create_job(self, user_id: str, data: JobCreate):
+        job = await self.job_uc.create_job(
+            user_id=user_id,
+            job_title=data.job_title,
+            company_name=data.company_name,
+            job_description=data.job_description,
+            url=data.url,
+            location=data.location
+        )
+        return JobResponse.from_orm(job)
+
+    async def get_job(self, job_id: int, user_id: str):
+        job = await self.job_uc.get_job(job_id, user_id)
+        if not job:
+            return None
+        return JobResponse.from_orm(job)
+
+    async def list_jobs(self, user_id: str):
+        jobs = await self.job_uc.get_all_jobs(user_id)
+        return [JobResponse.from_orm(j) for j in jobs]
+
+    async def update_job(self, job_id: int, user_id: str, data: JobUpdate):
+        job = await self.job_uc.update_job(
+            job_id=job_id,
+            user_id=user_id,
+            job_title=data.job_title,
+            company_name=data.company_name,
+            job_description=data.job_description,
+            url=data.url,
+            location=data.location
+        )
+        if not job:
+            return None
+        return JobResponse.from_orm(job)
+
+    async def delete_job(self, job_id: int, user_id: str):
+        return await self.job_uc.delete_job(job_id, user_id)
 
     async def create_or_update_profile(self, user_id: str, data: ProfileUpdate):
         saved_profile = await self.create_profile_uc.execute(
