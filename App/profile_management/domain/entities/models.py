@@ -111,3 +111,16 @@ class GeneratedResume:
     job_id: Optional[int] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     id: Optional[int] = None
+
+@dataclass
+class ResumeEvaluation:
+    user_id: str
+    resume_id: int
+    job_id: int
+    score: int
+    summary: str
+    strengths: List[str] = field(default_factory=list)
+    gaps: List[str] = field(default_factory=list)
+    suggestions: List[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    id: Optional[int] = None

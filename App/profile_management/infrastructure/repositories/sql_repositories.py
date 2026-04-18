@@ -2,9 +2,9 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, func, update
 from sqlalchemy.orm import selectinload
-from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill, GeneratedResume, Job
-from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository, ResumeRepository, JobRepository
-from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill, GeneratedResume as DBGeneratedResume, Job as DBJob
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill, GeneratedResume, Job, ResumeEvaluation
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository, ResumeRepository, JobRepository, EvaluationRepository
+from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill, GeneratedResume as DBGeneratedResume, Job as DBJob, ResumeEvaluation as DBResumeEvaluation
 from datetime import datetime
 
 class SqlAlchemyJobRepository(JobRepository):
@@ -690,4 +690,62 @@ class SqlAlchemyResumeRepository(ResumeRepository):
             version=db_resume.version,
             job_id=db_resume.job_id,
             created_at=db_resume.created_at
+        )
+
+
+class SqlAlchemyEvaluationRepository(EvaluationRepository):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def save(self, evaluation: ResumeEvaluation) -> ResumeEvaluation:
+        db_eval = DBResumeEvaluation(
+            user_id=evaluation.user_id,
+            resume_id=evaluation.resume_id,
+            job_id=evaluation.job_id,
+            score=evaluation.score,
+            summary=evaluation.summary,
+            strengths=evaluation.strengths,
+            gaps=evaluation.gaps,
+            suggestions=evaluation.suggestions,
+            created_at=datetime.utcnow()
+        )
+        self.session.add(db_eval)
+        await self.session.commit()
+        await self.session.refresh(db_eval)
+        return self._to_domain(db_eval)
+
+    async def get_by_id(self, evaluation_id: int) -> Optional[ResumeEvaluation]:
+        stmt = select(DBResumeEvaluation).filter_by(id=evaluation_id)
+        result = await self.session.execute(stmt)
+        db_eval = result.scalars().first()
+        if db_eval:
+            return self._to_domain(db_eval)
+        return None
+
+    async def get_by_resume_and_job(self, resume_id: int, job_id: int) -> Optional[ResumeEvaluation]:
+        stmt = select(DBResumeEvaluation).filter_by(resume_id=resume_id, job_id=job_id).order_by(DBResumeEvaluation.created_at.desc())
+        result = await self.session.execute(stmt)
+        db_eval = result.scalars().first()
+        if db_eval:
+            return self._to_domain(db_eval)
+        return None
+
+    async def get_all_by_user(self, user_id: str) -> List[ResumeEvaluation]:
+        stmt = select(DBResumeEvaluation).filter_by(user_id=user_id).order_by(DBResumeEvaluation.created_at.desc())
+        result = await self.session.execute(stmt)
+        db_evals = result.scalars().all()
+        return [self._to_domain(e) for e in db_evals]
+
+    def _to_domain(self, db_eval: DBResumeEvaluation) -> ResumeEvaluation:
+        return ResumeEvaluation(
+            id=db_eval.id,
+            user_id=db_eval.user_id,
+            resume_id=db_eval.resume_id,
+            job_id=db_eval.job_id,
+            score=db_eval.score,
+            summary=db_eval.summary,
+            strengths=db_eval.strengths,
+            gaps=db_eval.gaps,
+            suggestions=db_eval.suggestions,
+            created_at=db_eval.created_at
         )

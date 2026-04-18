@@ -57,5 +57,10 @@ class AiServiceInterface(ABC):
         pass
 
     @abstractmethod
+    async def evaluate_resume(self, resume_data: Dict[str, Any], job_description: str) -> Dict[str, Any]:
+        """Evaluate a resume against a job description."""
+        pass
+
+    @abstractmethod
     async def generate_tags(self, user_id: str, title: TitleForAi) -> List[str]:
         pass

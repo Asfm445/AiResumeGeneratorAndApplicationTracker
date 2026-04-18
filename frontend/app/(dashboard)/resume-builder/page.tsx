@@ -15,8 +15,19 @@ import { useAuthStore } from "@/lib/store";
 import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { ResumeEvaluationReport } from "@/components/resume/ResumeEvaluationReport";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+interface EvaluationData {
+  id: number;
+  score: number;
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  suggestions: string[];
+  created_at: string;
+}
+
 interface ResumeItem {
   id: number;
   user_id: string;
@@ -64,6 +75,8 @@ export default function ResumeBuilderPage() {
   // UI state
   const [loading, setLoading] = useState(false);
   const [refining, setRefining] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
+  const [evaluation, setEvaluation] = useState<EvaluationData | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -184,6 +197,7 @@ export default function ResumeBuilderPage() {
     setEditedData(JSON.parse(JSON.stringify(r.resume_data)));
     setIsEditing(false);
     setShowRefinePanel(false);
+    setEvaluation(null);
   };
 
   const refreshCurrentList = async (newResumeId?: number) => {
@@ -283,6 +297,26 @@ export default function ResumeBuilderPage() {
       alert(err.response?.data?.detail || "Failed to refine resume.");
     } finally {
       setRefining(false);
+    }
+  };
+
+  const handleEvaluate = async () => {
+    if (!selectedResume || !selectedJobId) {
+      alert("Please select a job to evaluate against.");
+      return;
+    }
+    setEvaluating(true);
+    setEvaluation(null);
+    try {
+      const res = await api.post("/api/v1/resume/evaluate", {
+        resume_id: selectedResume.id,
+        job_id: parseInt(selectedJobId),
+      });
+      setEvaluation(res.data.data);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to evaluate resume.");
+    } finally {
+      setEvaluating(false);
     }
   };
 
@@ -497,6 +531,23 @@ export default function ResumeBuilderPage() {
                   <Sparkles className="mr-2 h-4 w-4 text-indigo-600" /> Refine
                 </Button>
 
+                {selectedJobId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEvaluate}
+                    disabled={evaluating}
+                    className="border-emerald-200 hover:bg-emerald-50"
+                  >
+                    {evaluating ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trophy className="mr-2 h-4 w-4 text-emerald-600" />
+                    )}
+                    {evaluating ? "Scoring..." : "Score Resume"}
+                  </Button>
+                )}
+
                 {isEditing ? (
                   <>
                     <Button
@@ -579,6 +630,13 @@ export default function ResumeBuilderPage() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Evaluation Results */}
+            {evaluation && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <ResumeEvaluationReport data={evaluation} />
+              </div>
             )}
 
             {/* Resume preview */}

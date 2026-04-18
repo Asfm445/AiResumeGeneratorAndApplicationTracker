@@ -1,5 +1,5 @@
-from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, SkillRepository, ProjectRepository, ExprianceRepository, ResumeRepository, JobRepository
-from App.profile_management.domain.entities.models import UserProfile, GeneratedResume, Job
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, SkillRepository, ProjectRepository, ExprianceRepository, ResumeRepository, JobRepository, EvaluationRepository
+from App.profile_management.domain.entities.models import UserProfile, GeneratedResume, Job, ResumeEvaluation
 from App.resume_genetor.domain.interfaces.ai_service_interface import AiServiceInterface
 from App.resume_genetor.domain.models.model import TitleForAi
 from App.resume_genetor.domain.interfaces.embeding_service import EmbeddingService
@@ -15,7 +15,8 @@ class ResumeUseCase:
                  expriance_repo: ExprianceRepository,
                  embedding_service: EmbeddingService,
                  resume_repo: ResumeRepository,
-                 job_repo: JobRepository
+                 job_repo: JobRepository,
+                 evaluation_repo: EvaluationRepository
                  ):
         self.profile_repo = profile_repo
         self.ai_service = ai_service
@@ -26,6 +27,7 @@ class ResumeUseCase:
         self.embedding_service = embedding_service
         self.resume_repo = resume_repo
         self.job_repo = job_repo
+        self.evaluation_repo = evaluation_repo
 
     async def _get_resume_input_data(self, user_id: str, title_id: Optional[int] = None) -> dict:
         # Fetch user profile and related data
@@ -387,6 +389,53 @@ class ResumeUseCase:
         title = TitleForAi(title_name=target_title_obj.title_name, description=target_title_obj.description)
         tags = await self.ai_service.generate_tags(user_id, title)
         return tags
+
+    async def evaluate_resume(self, user_id: str, resume_id: int, job_id: int) -> dict:
+        resume = await self.resume_repo.get_by_id(resume_id)
+        if not resume or resume.user_id != user_id:
+            raise ValueError("Resume not found or unauthorized")
+
+        job = await self.job_repo.get_by_id(job_id)
+        if not job or job.user_id != user_id:
+            raise ValueError("Job not found or unauthorized")
+
+        # Check for existing evaluation
+        existing_eval = await self.evaluation_repo.get_by_resume_and_job(resume_id, job_id)
+        if existing_eval:
+            return {
+                "id": existing_eval.id,
+                "score": existing_eval.score,
+                "summary": existing_eval.summary,
+                "strengths": existing_eval.strengths,
+                "gaps": existing_eval.gaps,
+                "suggestions": existing_eval.suggestions,
+                "created_at": existing_eval.created_at.isoformat()
+            }
+
+        evaluation_data = await self.ai_service.evaluate_resume(resume.resume_data, job.job_description)
+
+        evaluation = ResumeEvaluation(
+            user_id=user_id,
+            resume_id=resume_id,
+            job_id=job_id,
+            score=evaluation_data["score"],
+            summary=evaluation_data["summary"],
+            strengths=evaluation_data["strengths"],
+            gaps=evaluation_data["gaps"],
+            suggestions=evaluation_data["suggestions"]
+        )
+
+        saved_eval = await self.evaluation_repo.save(evaluation)
+
+        return {
+            "id": saved_eval.id,
+            "score": saved_eval.score,
+            "summary": saved_eval.summary,
+            "strengths": saved_eval.strengths,
+            "gaps": saved_eval.gaps,
+            "suggestions": saved_eval.suggestions,
+            "created_at": saved_eval.created_at.isoformat()
+        }
         
 
 

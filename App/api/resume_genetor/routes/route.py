@@ -22,7 +22,11 @@ class RefineResumeRequest(BaseModel):
 class UpdateResumeRequest(BaseModel):
     resume_data: Dict[str, Any]
 
-from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository, SqlAlchemyResumeRepository, SqlAlchemyJobRepository
+class EvaluateResumeRequest(BaseModel):
+    resume_id: int
+    job_id: int
+
+from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository, SqlAlchemyResumeRepository, SqlAlchemyJobRepository, SqlAlchemyEvaluationRepository
 from App.resume_genetor.infrastructure.services.ai_service import AiService
 from App.resume_genetor.infrastructure.services.embedding_service import GeminiEmbeddingService
 
@@ -39,6 +43,7 @@ def get_resume_use_case(db: AsyncSession = Depends(get_db)):
     project_repo = SqlAlchemyProjectRepository(db)
     resume_repo = SqlAlchemyResumeRepository(db)
     job_repo = SqlAlchemyJobRepository(db)
+    evaluation_repo = SqlAlchemyEvaluationRepository(db)
     ai_service = AiService()
     embedding_service = GeminiEmbeddingService()
 
@@ -51,7 +56,8 @@ def get_resume_use_case(db: AsyncSession = Depends(get_db)):
         ai_service=ai_service,
         embedding_service=embedding_service,
         resume_repo=resume_repo,
-        job_repo=job_repo
+        job_repo=job_repo,
+        evaluation_repo=evaluation_repo
     )
 
 @router.get("/generate")
@@ -79,6 +85,24 @@ async def tailor_resume_endpoint(
             job_id=request.job_id
         )
         return {"data": resume}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/evaluate")
+async def evaluate_resume_endpoint(
+    request: EvaluateResumeRequest,
+    user_id: str = Depends(get_current_user_id),
+    resume_use_case: ResumeUseCase = Depends(get_resume_use_case)
+):
+    try:
+        evaluation = await resume_use_case.evaluate_resume(
+            user_id,
+            resume_id=request.resume_id,
+            job_id=request.job_id
+        )
+        return {"data": evaluation}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

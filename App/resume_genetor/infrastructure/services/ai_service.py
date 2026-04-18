@@ -266,6 +266,31 @@ class AiService(AiServiceInterface):
             """
         return await self.send_message(prompt)
 
+    async def evaluate_resume(self, resume_data: Dict[str, Any], job_description: str) -> Dict[str, Any]:
+        prompt = f"""
+            You are an expert Technical Recruiter and Career Coach. 
+            Evaluate the following resume against the provided job description.
+            
+            RESUME DATA:
+            {json.dumps(resume_data, indent=2)}
+            
+            JOB DESCRIPTION:
+            {job_description}
+            
+            CRITICAL INSTRUCTIONS:
+            1. Provide a match score (0-100) based on how well the resume meets the requirements.
+            2. Write a brief summary (2-3 sentences) of the overall match.
+            3. List specific strengths (where the resume matches the JD well).
+            4. List specific gaps (missing skills, experience, or certifications).
+            5. Provide actionable suggestions to improve the resume for THIS specific job.
+            
+            Return the evaluation in JSON format with these exact keys:
+            "score", "summary", "strengths", "gaps", "suggestions".
+            "strengths", "gaps", and "suggestions" MUST be lists of strings.
+            "score" MUST be an integer.
+            """
+        return await self.send_message(prompt)
+
 
     async def generate_tags(self, user_id: str, title: TitleForAi) -> List[str]:
         prompt = f"""

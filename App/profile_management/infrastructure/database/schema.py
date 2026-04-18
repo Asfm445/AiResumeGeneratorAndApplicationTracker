@@ -168,3 +168,23 @@ class GeneratedResume(Base):
     job = relationship("Job", back_populates="resumes")
 
 
+class ResumeEvaluation(Base):
+    __tablename__ = "resume_evaluations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(255), nullable=False, index=True)
+    resume_id = Column(Integer, ForeignKey('generated_resumes.id'), nullable=False)
+    job_id = Column(Integer, ForeignKey('jobs.id'), nullable=False)
+
+    score = Column(Integer, nullable=False)
+    summary = Column(Text, nullable=False)
+    strengths = Column(JSON, nullable=False)
+    gaps = Column(JSON, nullable=False)
+    suggestions = Column(JSON, nullable=False)
+
+    created_at = Column(DateTime, nullable=False)
+
+    resume = relationship("GeneratedResume")
+    job = relationship("Job")
+
+
