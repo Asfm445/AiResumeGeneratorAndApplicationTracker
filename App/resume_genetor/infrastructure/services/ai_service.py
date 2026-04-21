@@ -80,9 +80,11 @@ class AiService(AiServiceInterface):
             User current Headline: {profile_data.get('headline', '')}
             User Bio: {profile_data.get('bio', '')}
             
-            CRITICAL INSTRUCTION: The headline MUST reflect the Target Role as the user's primary identity.
-            DO NOT use "transitioning" or "aspiring" language. 
-            Include key technologies relevant to the Target Role that the user possesses.
+            CRITICAL INSTRUCTIONS: 
+            1. The headline MUST reflect the Target Role as the user's primary identity.
+            2. DO NOT use "transitioning" or "aspiring" language. 
+            3. Include key technologies relevant to the Target Role that the user POSSESSES.
+            4. **ANTI-HALLUCINATION:** DO NOT add any skills, technologies, or seniority levels (e.g., "Senior") that are not explicitly found in the user's bio, current headline, or data.
             
             Return JSON in this format:
             {{
@@ -101,11 +103,13 @@ class AiService(AiServiceInterface):
             User Headline: {profile_data.get('headline', '')}
             User Bio: {profile_data.get('bio', '')}
             
-            CRITICAL INSTRUCTION: Adopt the identity of the Target Role immediately. 
-            Start with "[Target Role] with expertise in..." 
-            Highlight relevant projects and skills from the user's data that prove competence in the Target Role.
-            Minimize or omit background info that contradicts the Target Role unless it can be framed as a complementary technical strength (e.g., "Full-stack perspective on API integration").
-            Don't use exaggerating words like 'passionate' or 'highly motivated'.
+            CRITICAL INSTRUCTIONS: 
+            1. Adopt the identity of the Target Role immediately. 
+            2. Start with "[Target Role] with expertise in..." 
+            3. Highlight relevant projects and skills from the user's data that prove competence in the Target Role.
+            4. Minimize or omit background info that contradicts the Target Role unless it can be framed as a complementary technical strength.
+            5. Don't use exaggerating words like 'passionate' or 'highly motivated'.
+            6. **ANTI-HALLUCINATION:** DO NOT invent experiences, technologies, or impact that the user has not provided. If a skill is missing from the data, DO NOT mention it in the summary.
             
             Return JSON in this format:
             {{
@@ -121,22 +125,21 @@ class AiService(AiServiceInterface):
             Target Role Description: {target_description or "N/A"}
             
             CRITICAL INSTRUCTION: Your goal is to make the experience highly relevant to the Target Role.
-            If the target is '{target_title}' but the experience was in a different area (e.g., target is Backend but job was Frontend), 
-            focus on integration, performance, logic, and any crossover skills (APIs, data processing, architecture).
+            If the target is '{target_title}' but the experience was in a different area, focus on crossover skills.
+            
+            **ANTI-HALLUCINATION:** 
+            - DO NOT add new technologies, tools, or responsibilities that are not in the original experience data.
+            - DO NOT change job titles to match the target role if the original title was different.
+            - Focus on rephrasing existing work to highlight relevance, not inventing new work.
             
             For EACH experience, provide EXACTLY 3-4 bullet points.
             Use strong action verbs and highlight results/impact.
             Return a list of experiences where each experience matches this JSON format:
             {{
-              "job_title": "Position Name",
+              "job_title": "Original Position Name",
               "company": "Company Name",
-              "dates": "Month Year - Month Year (or Present)",
+              "dates": "Month Year - Month Year",
               "responsibilities": ["Bullet point 1", "Bullet point 2", "Bullet point 3", "Bullet point 4"]
-            }}
-            
-            Return JSON in this format:
-            {{
-              "experiences": [...]
             }}
             
             Experience data: {experience_data}
@@ -215,10 +218,13 @@ class AiService(AiServiceInterface):
             4. **Projects:** Select and highlight projects that demonstrate the specific technical competencies required for this role. For EACH project, provide EXACTLY 3-4 bullet points in the description.
             5. **Skills:** Categorize and prioritize skills that are mentioned or highly relevant to the JD.
             
+            **ANTI-HALLUCINATION RULES:**
+            - DO NOT ADD ANY SKILLS, TECHNOLOGIES, OR EXPERIENCES NOT FOUND IN THE PROVIDED PROFILE DATA.
+            - If the JD asks for a skill the user doesn't have, DO NOT invent it. Instead, emphasize related transferable skills.
+            - The final resume must be 100% truthful based on the PROFILE DATA.
+            
             Return the FULL tailored resume in JSON format with these exact keys:
             "headline", "professional_summary", "professional_experience", "projects", "skills".
-            
-            Keep the output strictly in the requested JSON format.
             """
         return await self.send_message(prompt)
 
@@ -246,48 +252,74 @@ class AiService(AiServiceInterface):
             "skills": skills
         }
 
-    async def refine_resume(self, current_resume: Dict, comment: str) -> Dict[str, Any]:
+    async def refine_resume(self, current_resume: Dict, comment: str, profile_data: Optional[Dict] = None) -> Dict[str, Any]:
+        truth_context = ""
+        if profile_data:
+            truth_context = f"\nORIGINAL PROFILE DATA (The Truth):\n{json.dumps(profile_data, indent=2)}\n"
+
         prompt = f"""
             You are a professional AI Resume Editor. 
             The user wants to refine their current resume based on this comment: "{comment}"
             
             Current Resume Data:
             {json.dumps(current_resume, indent=2)}
+            {truth_context}
             
-            CRITICAL INSTRUCTION: Apply the user's feedback carefully across all relevant sections. 
-            Maintain the overall structure and quality.
-            For EVERY experience and project, ensure there are EXACTLY 3-4 bullet points.
+            CRITICAL INSTRUCTIONS:
+            1. Apply the user's feedback carefully across all relevant sections. 
+            2. Maintain the overall structure and quality.
+            3. For EVERY experience and project, ensure there are EXACTLY 3-4 bullet points.
+            
+            **ANTI-HALLUCINATION RULES:**
+            - DO NOT ADD ANY NEW SKILLS, TECHNOLOGIES, OR EXPERIENCES THAT ARE NOT IN THE 'Current Resume Data' OR 'ORIGINAL PROFILE DATA'.
+            - If the user's feedback or evaluation suggestions (like 'add Kubernetes') cannot be fulfilled using the provided data, DO NOT invent experience. Instead, try to rephrase existing experience to show relevant context or transferable skills.
+            - NEVER FABRICATE DATA TO SATISFY A COMMENT. Truthfulness is priority #1.
             
             Return the FULL updated resume in JSON format with these exact keys:
             "headline", "professional_summary", "professional_experience", "projects", "skills".
-            
-            Ensure professional_experience and projects remain lists of objects as in the input.
-            Ensure skills remains a dictionary of categories.
             """
         return await self.send_message(prompt)
 
-    async def evaluate_resume(self, resume_data: Dict[str, Any], job_description: str) -> Dict[str, Any]:
+    async def evaluate_resume(self, resume_data: Dict[str, Any], job_description: str, profile_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        profile_info = ""
+        if profile_context:
+            profile_info = f"\nUSER FULL PROFILE CONTEXT:\n{json.dumps(profile_context, indent=2)}\n"
+
         prompt = f"""
             You are an expert Technical Recruiter and Career Coach. 
-            Evaluate the following resume against the provided job description.
+            Evaluate the following resume against the provided job description and for ATS (Applicant Tracking System) compatibility.
             
             RESUME DATA:
             {json.dumps(resume_data, indent=2)}
             
             JOB DESCRIPTION:
             {job_description}
+            {profile_info}
             
             CRITICAL INSTRUCTIONS:
-            1. Provide a match score (0-100) based on how well the resume meets the requirements.
-            2. Write a brief summary (2-3 sentences) of the overall match.
-            3. List specific strengths (where the resume matches the JD well).
-            4. List specific gaps (missing skills, experience, or certifications).
-            5. Provide actionable suggestions to improve the resume for THIS specific job.
+            1. **Job Match Evaluation:**
+               - Provide a match score (0-100) based on how well the resume meets the job requirements.
+               - Write a brief summary (2-3 sentences) of the overall match.
+               - List specific strengths (where the resume matches the JD well).
+               - List specific gaps (missing skills, experience, or certifications in THIS resume version).
+            
+            2. **Deep Gap Analysis (Profile Gaps):**
+               - Compare the Job Description with the 'USER FULL PROFILE CONTEXT'.
+               - Identify "Profile Gaps": These are critical skills or experiences required by the JD that are missing from the ENTIRE user profile and all project history.
+               - If a skill is in the profile but not in the resume, it's a 'Resume Gap'.
+               - If a skill is missing from both, it's a 'Profile Gap'.
+            
+            3. **ATS Compatibility Evaluation:**
+               - Provide an ATS score (0-100) based on formatting, keyword optimization, and structural clarity.
+               - List specific ATS-related feedback points.
+            
+            4. **Actionable Suggestions:**
+               - Provide actionable suggestions to improve BOTH the job match and ATS compatibility.
             
             Return the evaluation in JSON format with these exact keys:
-            "score", "summary", "strengths", "gaps", "suggestions".
-            "strengths", "gaps", and "suggestions" MUST be lists of strings.
-            "score" MUST be an integer.
+            "score", "summary", "strengths", "gaps", "suggestions", "ats_score", "ats_feedback", "profile_gaps".
+            "strengths", "gaps", "suggestions", "ats_feedback", and "profile_gaps" MUST be lists of strings.
+            "score" and "ats_score" MUST be integers.
             """
         return await self.send_message(prompt)
 

@@ -702,11 +702,15 @@ class SqlAlchemyEvaluationRepository(EvaluationRepository):
             user_id=evaluation.user_id,
             resume_id=evaluation.resume_id,
             job_id=evaluation.job_id,
+            title_id=evaluation.title_id,
             score=evaluation.score,
             summary=evaluation.summary,
             strengths=evaluation.strengths,
             gaps=evaluation.gaps,
             suggestions=evaluation.suggestions,
+            ats_score=evaluation.ats_score,
+            ats_feedback=evaluation.ats_feedback,
+            profile_gaps=evaluation.profile_gaps,
             created_at=datetime.utcnow()
         )
         self.session.add(db_eval)
@@ -722,8 +726,14 @@ class SqlAlchemyEvaluationRepository(EvaluationRepository):
             return self._to_domain(db_eval)
         return None
 
-    async def get_by_resume_and_job(self, resume_id: int, job_id: int) -> Optional[ResumeEvaluation]:
-        stmt = select(DBResumeEvaluation).filter_by(resume_id=resume_id, job_id=job_id).order_by(DBResumeEvaluation.created_at.desc())
+    async def get_by_resume_and_context(self, resume_id: int, job_id: Optional[int] = None, title_id: Optional[int] = None) -> Optional[ResumeEvaluation]:
+        filters = [DBResumeEvaluation.resume_id == resume_id]
+        if job_id is not None:
+            filters.append(DBResumeEvaluation.job_id == job_id)
+        if title_id is not None:
+            filters.append(DBResumeEvaluation.title_id == title_id)
+            
+        stmt = select(DBResumeEvaluation).filter(*filters).order_by(DBResumeEvaluation.created_at.desc())
         result = await self.session.execute(stmt)
         db_eval = result.scalars().first()
         if db_eval:
@@ -742,10 +752,14 @@ class SqlAlchemyEvaluationRepository(EvaluationRepository):
             user_id=db_eval.user_id,
             resume_id=db_eval.resume_id,
             job_id=db_eval.job_id,
+            title_id=db_eval.title_id,
             score=db_eval.score,
             summary=db_eval.summary,
             strengths=db_eval.strengths,
             gaps=db_eval.gaps,
             suggestions=db_eval.suggestions,
+            ats_score=db_eval.ats_score or 0,
+            ats_feedback=db_eval.ats_feedback or [],
+            profile_gaps=db_eval.profile_gaps or [],
             created_at=db_eval.created_at
         )

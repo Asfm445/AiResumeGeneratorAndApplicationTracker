@@ -206,7 +206,7 @@ class EvaluationRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_resume_and_job(self, resume_id: int, job_id: int) -> Optional[ResumeEvaluation]:
+    async def get_by_resume_and_context(self, resume_id: int, job_id: Optional[int] = None, title_id: Optional[int] = None) -> Optional[ResumeEvaluation]:
         pass
 
     @abstractmethod

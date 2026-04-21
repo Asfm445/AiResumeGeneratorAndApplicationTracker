@@ -174,17 +174,22 @@ class ResumeEvaluation(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(255), nullable=False, index=True)
     resume_id = Column(Integer, ForeignKey('generated_resumes.id'), nullable=False)
-    job_id = Column(Integer, ForeignKey('jobs.id'), nullable=False)
+    job_id = Column(Integer, ForeignKey('jobs.id'), nullable=True)
+    title_id = Column(Integer, ForeignKey('titles.id'), nullable=True)
 
     score = Column(Integer, nullable=False)
     summary = Column(Text, nullable=False)
     strengths = Column(JSON, nullable=False)
     gaps = Column(JSON, nullable=False)
     suggestions = Column(JSON, nullable=False)
+    ats_score = Column(Integer, nullable=True)
+    ats_feedback = Column(JSON, nullable=True)
+    profile_gaps = Column(JSON, nullable=True)
 
     created_at = Column(DateTime, nullable=False)
 
     resume = relationship("GeneratedResume")
     job = relationship("Job")
+    title = relationship("Title")
 
 

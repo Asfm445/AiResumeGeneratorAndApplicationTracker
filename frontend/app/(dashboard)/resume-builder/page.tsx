@@ -25,6 +25,9 @@ interface EvaluationData {
   strengths: string[];
   gaps: string[];
   suggestions: string[];
+  ats_score: number;
+  ats_feedback: string[];
+  profile_gaps?: string[];
   created_at: string;
 }
 
@@ -283,16 +286,19 @@ export default function ResumeBuilderPage() {
     setNewJobDescription("");
   };
 
-  const handleRefine = async () => {
-    if (!refinementComment.trim() || !selectedResume) return;
+  const handleRefine = async (customComment?: string) => {
+    const comment = customComment || refinementComment;
+    if (!comment.trim() || !selectedResume) return;
     setRefining(true);
     try {
-      await api.post(`/api/v1/resume/refine/${selectedResume.id}`, {
-        comment: refinementComment,
+      const res = await api.post(`/api/v1/resume/refine/${selectedResume.id}`, {
+        comment: comment,
       });
+      const newResume = res.data.data;
       setRefinementComment("");
       setShowRefinePanel(false);
-      await refreshCurrentList();
+      setEvaluation(null); // Clear evaluation for the new version
+      await refreshCurrentList(newResume.id);
     } catch (err: any) {
       alert(err.response?.data?.detail || "Failed to refine resume.");
     } finally {
@@ -301,8 +307,8 @@ export default function ResumeBuilderPage() {
   };
 
   const handleEvaluate = async () => {
-    if (!selectedResume || !selectedJobId) {
-      alert("Please select a job to evaluate against.");
+    if (!selectedResume) {
+      alert("Please select a resume to evaluate.");
       return;
     }
     setEvaluating(true);
@@ -310,7 +316,6 @@ export default function ResumeBuilderPage() {
     try {
       const res = await api.post("/api/v1/resume/evaluate", {
         resume_id: selectedResume.id,
-        job_id: parseInt(selectedJobId),
       });
       setEvaluation(res.data.data);
     } catch (err: any) {
@@ -635,7 +640,11 @@ export default function ResumeBuilderPage() {
             {/* Evaluation Results */}
             {evaluation && (
               <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                <ResumeEvaluationReport data={evaluation} />
+                <ResumeEvaluationReport 
+                  data={evaluation} 
+                  onApplySuggestions={(comment) => handleRefine(comment)}
+                  isApplying={refining}
+                />
               </div>
             )}
 
@@ -654,6 +663,9 @@ export default function ResumeBuilderPage() {
                   data={isEditing ? editedData : selectedResume.resume_data}
                   isEditable={isEditing}
                   onUpdate={(newData) => setEditedData(newData)}
+                  comparisonData={
+                    resumes.find(r => r.version === selectedResume.version - 1)?.resume_data
+                  }
                 />
               </div>
             </div>

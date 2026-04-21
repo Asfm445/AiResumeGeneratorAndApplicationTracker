@@ -116,11 +116,15 @@ class GeneratedResume:
 class ResumeEvaluation:
     user_id: str
     resume_id: int
-    job_id: int
     score: int
     summary: str
+    job_id: Optional[int] = None
+    title_id: Optional[int] = None
     strengths: List[str] = field(default_factory=list)
     gaps: List[str] = field(default_factory=list)
     suggestions: List[str] = field(default_factory=list)
+    ats_score: int = 0
+    ats_feedback: List[str] = field(default_factory=list)
+    profile_gaps: List[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     id: Optional[int] = None

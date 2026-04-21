@@ -1,4 +1,5 @@
 import React from 'react';
+import { DiffText } from '@/components/ui/DiffText';
 
 interface ResumeData {
   name?: string;
@@ -17,9 +18,10 @@ interface ResumeDocumentProps {
   preview?: boolean;
   isEditable?: boolean;
   onUpdate?: (newData: ResumeData) => void;
+  comparisonData?: ResumeData;
 }
 
-export function ResumeDocument({ data, id, preview = false, isEditable = false, onUpdate }: ResumeDocumentProps) {
+export function ResumeDocument({ data, id, preview = false, isEditable = false, onUpdate, comparisonData }: ResumeDocumentProps) {
   const handleChange = (field: string, value: any) => {
     if (onUpdate) {
       onUpdate({ ...data, [field]: value });
@@ -49,17 +51,17 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
     return [String(input)];
   };
 
-  const Input = ({ value, onChange, className }: any) => (
+  const Input = ({ value, onChange, className, comparisonValue }: any) => (
     isEditable ? (
       <input 
         className={`bg-indigo-50/50 border-b border-indigo-200 focus:border-indigo-600 outline-none px-1 rounded ${className}`}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
       />
-    ) : <span>{value}</span>
+    ) : comparisonValue ? <DiffText oldText={comparisonValue} newText={value} className={className} /> : <span className={className}>{value}</span>
   );
 
-  const TextArea = ({ value, onChange, className }: any) => (
+  const TextArea = ({ value, onChange, className, comparisonValue }: any) => (
     isEditable ? (
       <textarea 
         className={`w-full bg-indigo-50/50 border-b border-indigo-200 focus:border-indigo-600 outline-none px-1 rounded resize-none ${className}`}
@@ -67,7 +69,7 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
         onChange={(e) => onChange(e.target.value)}
         rows={3}
       />
-    ) : <p className={className}>{value}</p>
+    ) : comparisonValue ? <DiffText oldText={comparisonValue} newText={value} className={className} /> : <p className={className}>{value}</p>
   );
 
   const BulletPoints = ({ points, className }: { points: string[], className?: string }) => (
@@ -100,7 +102,12 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
         </div>
         
         <div className="flex flex-wrap justify-center gap-4 text-xs text-[#4b5563] font-sans border-b border-[#e5e7eb] pb-4">
-          <Input value={data?.headline} onChange={(v: string) => handleChange('headline', v)} className="uppercase tracking-wider font-semibold" />
+          <Input 
+            value={data?.headline} 
+            onChange={(v: string) => handleChange('headline', v)} 
+            className="uppercase tracking-wider font-semibold" 
+            comparisonValue={comparisonData?.headline}
+          />
           <span className="text-[#9ca3af]">|</span>
           <Input value={data?.location} onChange={(v: string) => handleChange('location', v)} />
           <span className="text-[#9ca3af]">|</span>
@@ -115,6 +122,7 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
           value={data?.professional_summary} 
           onChange={(v: string) => handleChange('professional_summary', v)} 
           className="text-justify leading-6 italic text-[#374151]" 
+          comparisonValue={comparisonData?.professional_summary}
         />
       </section>
 

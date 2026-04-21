@@ -12,7 +12,9 @@ MOCK_EVALUATION = {
     "summary": "The resume matches the job requirements well, especially in backend development.",
     "strengths": ["Python expertise", "FastAPI experience"],
     "gaps": ["Missing Docker knowledge", "No cloud experience mentioned"],
-    "suggestions": ["Add Docker projects", "Mention AWS services used"]
+    "suggestions": ["Add Docker projects", "Mention AWS services used"],
+    "ats_score": 90,
+    "ats_feedback": ["Standard headers used", "Keywords optimized"]
 }
 
 @pytest.fixture
@@ -37,7 +39,7 @@ def test_evaluate_resume_endpoint(mock_user, mock_resume_use_case):
     client = TestClient(app)
     response = client.post(
         "/api/v1/resume/evaluate",
-        json={"resume_id": 1, "job_id": 1}
+        json={"resume_id": 1}
     )
     
     assert response.status_code == 200
@@ -45,6 +47,7 @@ def test_evaluate_resume_endpoint(mock_user, mock_resume_use_case):
     assert data["score"] == 85
     assert data["summary"] == MOCK_EVALUATION["summary"]
     assert data["strengths"] == MOCK_EVALUATION["strengths"]
+    assert data["ats_score"] == 90
+    assert data["ats_feedback"] == MOCK_EVALUATION["ats_feedback"]
     assert mock_resume_use_case.evaluate_resume.called
     assert mock_resume_use_case.evaluate_resume.call_args[0][1] == 1 # resume_id
-    assert mock_resume_use_case.evaluate_resume.call_args[0][2] == 1 # job_id

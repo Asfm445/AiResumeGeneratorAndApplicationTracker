@@ -199,25 +199,31 @@ class ResumeUseCase:
         if not resume or resume.user_id != user_id:
             raise ValueError("Resume not found or unauthorized")
 
+        # Fetch full profile context for Deep Gap Analysis
+        profile_data = await self._get_resume_input_data(user_id, resume.title_id)
+        profile_context = profile_data["ai_input_data"]
 
-        ai_generated_resume = await self.ai_service.refine_resume(resume.resume_data, comment)
-
+        # Single high-quality refinement with Truth context
+        refined_data = await self.ai_service.refine_resume(resume.resume_data, comment, profile_data=profile_context)
+        
         full_resume = {
             "name": resume.resume_data["name"],
             "email": resume.resume_data["email"],
             "location": resume.resume_data["location"],
-            **ai_generated_resume
+            **refined_data
         }
+        
+        # Save as a new version
         if resume.job_id:
             latest_version = await self.resume_repo.get_latest_version_by_job(resume.job_id)
             new_version = latest_version + 1
             
             generated_resume_entity = GeneratedResume(
-            user_id=user_id,
-            job_id=resume.job_id,
-            resume_data=full_resume,
-            version=new_version
-        )
+                user_id=user_id,
+                job_id=resume.job_id,
+                resume_data=full_resume,
+                version=new_version
+            )
         else:
             latest_version = await self.resume_repo.get_latest_version_by_title(resume.title_id)
             new_version = latest_version + 1
@@ -232,115 +238,12 @@ class ResumeUseCase:
         full_resume["id"] = saved.id
         full_resume["version"] = new_version
         
+        # Run evaluation on the NEW version automatically so UI is updated immediately
+        await self.evaluate_resume(user_id, saved.id, auto_improve=True)
+        
         return full_resume
     
 
-        
-
-        
-        
-
-
-            
-            
-            
-
-        
-
-       
-        
-        
-
-
-
-        
-
-        # data = await self._get_resume_input_data(user_id)
-        # # return data
-        # profile = data["profile"]
-        # target_title_obj = data["target_title_obj"]
-        # ai_input_data = data["ai_input_data"]
-        # print("+++++++++++++++++++++profile_____________________###########################")
-        # print(profile)
-        # print("+++++++++++++++++++++target_title_obj_____________________###########################")
-        # print(target_title_obj)
-        # print("+++++++++++++++++++++ai_input_data_____________________###########################")
-        # print(ai_input_data)
-
-        # return data
-
-    #     if job_id:
-    #         job = await self.job_repo.get_by_id(job_id)
-    #         if not job or job.user_id != user_id:
-    #             raise ValueError("Job not found or unauthorized")
-    #         job_description = job.job_description
-    #         job_title = job.job_title
-    #         company_name = job.company_name
-    #     elif not job_description:
-    #         raise ValueError("Job description or Job ID is required")
-    #     else:
-    #         # Create a job if it doesn't exist
-    #         job = Job(
-    #             user_id=user_id,
-    #             job_title=job_title or "Tailored Job",
-    #             company_name=company_name or "Unknown Company",
-    #             job_description=job_description
-    #         )
-    #         job = await self.job_repo.create(job)
-    #         job_id = job.id
-
-    #     # Tailor via AI
-    #     tailored_data = await self.ai_service.tailor_resume_to_jd(ai_input_data, job_description, job_title, company_name)
-
-    #     # Combine with static profile data
-    #     full_resume = {
-    #         "name": profile.name,
-    #         "email": profile.email,
-    #         "location": profile.location,
-    #         **tailored_data
-    #     }
-
-    #     # Save as new version
-    #     if target_title_obj:
-    #         latest_version = await self.resume_repo.get_latest_version(target_title_obj.id)
-    #         new_version = latest_version + 1
-            
-    #         generated_resume_entity = GeneratedResume(
-    #             user_id=user_id,
-    #             title_id=target_title_obj.id,
-    #             resume_data=full_resume,
-    #             version=new_version,
-    #             job_id=job_id
-    #         )
-    #         saved = await self.resume_repo.save(generated_resume_entity)
-    #         full_resume["id"] = saved.id
-    #         full_resume["version"] = new_version
-    #         full_resume["job_id"] = job_id
-        
-    #     return full_resume
-
-    # async def refine_resume(self, user_id: str, resume_id: int, comment: str) -> dict:
-    #     # Fetch the current resume
-    #     resume_entity = await self.resume_repo.get_by_id(resume_id)
-    #     if not resume_entity or resume_entity.user_id != user_id:
-    #         raise ValueError("Resume not found or unauthorized")
-
-    #     # Call AI to refine
-    #     refined_data = await self.ai_service.refine_resume(resume_entity.resume_data, comment)
-        
-    #     # Increment version and save as new
-    #     latest_version = await self.resume_repo.get_latest_version(resume_entity.title_id)
-    #     new_version = latest_version + 1
-        
-    #     new_resume_entity = GeneratedResume(
-    #         user_id=user_id,
-    #         title_id=resume_entity.title_id,
-    #         resume_data=refined_data,
-    #         version=new_version
-    #     )
-    #     saved_resume = await self.resume_repo.save(new_resume_entity)
-        
-    #     return {**refined_data, "id": saved_resume.id, "version": saved_resume.version}
 
     async def update_resume(self, user_id: str, resume_id: int, updated_data: dict) -> dict:
         # Fetch current to ensure ownership
@@ -390,39 +293,76 @@ class ResumeUseCase:
         tags = await self.ai_service.generate_tags(user_id, title)
         return tags
 
-    async def evaluate_resume(self, user_id: str, resume_id: int, job_id: int) -> dict:
+    async def evaluate_resume(self, user_id: str, resume_id: int, auto_improve: bool = False) -> dict:
         resume = await self.resume_repo.get_by_id(resume_id)
         if not resume or resume.user_id != user_id:
             raise ValueError("Resume not found or unauthorized")
 
-        job = await self.job_repo.get_by_id(job_id)
-        if not job or job.user_id != user_id:
-            raise ValueError("Job not found or unauthorized")
+        description = ""
+        job_id = resume.job_id
+        title_id = resume.title_id
 
-        # Check for existing evaluation
-        existing_eval = await self.evaluation_repo.get_by_resume_and_job(resume_id, job_id)
-        if existing_eval:
-            return {
-                "id": existing_eval.id,
-                "score": existing_eval.score,
-                "summary": existing_eval.summary,
-                "strengths": existing_eval.strengths,
-                "gaps": existing_eval.gaps,
-                "suggestions": existing_eval.suggestions,
-                "created_at": existing_eval.created_at.isoformat()
-            }
+        if job_id:
+            job = await self.job_repo.get_by_id(job_id)
+            if not job:
+                raise ValueError("Associated job not found")
+            description = job.job_description
+        elif title_id:
+            title = await self.title_repo.get_by_id(title_id)
+            if not title:
+                raise ValueError("Associated title not found")
+            description = title.description
+        else:
+            raise ValueError("Resume must be associated with either a job or a title for evaluation")
 
-        evaluation_data = await self.ai_service.evaluate_resume(resume.resume_data, job.job_description)
+        # Fetch full profile context for Deep Gap Analysis
+        profile_data = await self._get_resume_input_data(user_id, title_id)
+        profile_context = profile_data["ai_input_data"]
+
+        # Check for existing evaluation (only if not auto-improving)
+        if not auto_improve:
+            existing_eval = await self.evaluation_repo.get_by_resume_and_context(
+                resume_id=resume_id, 
+                job_id=job_id, 
+                title_id=title_id
+            )
+            if existing_eval:
+                return {
+                    "id": existing_eval.id,
+                    "score": existing_eval.score,
+                    "summary": existing_eval.summary,
+                    "strengths": existing_eval.strengths,
+                    "gaps": existing_eval.gaps,
+                    "suggestions": existing_eval.suggestions,
+                    "ats_score": existing_eval.ats_score,
+                    "ats_feedback": existing_eval.ats_feedback,
+                    "profile_gaps": existing_eval.profile_gaps,
+                    "created_at": existing_eval.created_at.isoformat()
+                }
+
+        evaluation_data = await self.ai_service.evaluate_resume(
+            resume.resume_data, 
+            description, 
+            profile_context=profile_context
+        )
+
+        # Phase 2: Self-Correction Loop (if auto_improve is True)
+        # We can trigger this from refine_resume or a dedicated endpoint.
+        # For now, let's just ensure evaluate_resume saves the new fields.
 
         evaluation = ResumeEvaluation(
             user_id=user_id,
             resume_id=resume_id,
             job_id=job_id,
+            title_id=title_id,
             score=evaluation_data["score"],
             summary=evaluation_data["summary"],
             strengths=evaluation_data["strengths"],
             gaps=evaluation_data["gaps"],
-            suggestions=evaluation_data["suggestions"]
+            suggestions=evaluation_data["suggestions"],
+            ats_score=evaluation_data.get("ats_score", 0),
+            ats_feedback=evaluation_data.get("ats_feedback", []),
+            profile_gaps=evaluation_data.get("profile_gaps", [])
         )
 
         saved_eval = await self.evaluation_repo.save(evaluation)
@@ -434,6 +374,9 @@ class ResumeUseCase:
             "strengths": saved_eval.strengths,
             "gaps": saved_eval.gaps,
             "suggestions": saved_eval.suggestions,
+            "ats_score": saved_eval.ats_score,
+            "ats_feedback": saved_eval.ats_feedback,
+            "profile_gaps": saved_eval.profile_gaps,
             "created_at": saved_eval.created_at.isoformat()
         }
         
