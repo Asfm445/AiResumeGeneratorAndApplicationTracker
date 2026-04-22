@@ -145,9 +145,6 @@ class ResumeUseCase:
         expriances = await self.expriance_repo.get_all(user_id)
 
         ai_input_data = {
-            "job_title": job.job_title,
-            "job_description": job.job_description,
-            "company_name": job.company_name,
             "user_bio": profile.about_text,
             "skills": [{"skill_type": s.skill_type, "skills": s.skills} for s in skills],
             "projects": [
@@ -169,7 +166,7 @@ class ResumeUseCase:
                 ]
         }
 
-        ai_generated_resume = await self.ai_service.generate_resume(ai_input_data)
+        ai_generated_resume = await self.ai_service.tailor_resume_to_jd(ai_input_data, job.job_description, job.job_title, job.company_name)
 
         full_resume = {
             "name": profile.name,

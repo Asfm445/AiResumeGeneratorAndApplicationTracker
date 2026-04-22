@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { FolderKanban, Plus, Trash2, ExternalLink, Tag, ArrowLeft, Info, Cpu, Layers, Pencil, X, Save } from "lucide-react";
 import api from "@/lib/api";
+import { useToastStore } from "@/lib/store";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 interface ProjectDescription {
   type: string;
@@ -24,6 +26,7 @@ interface Project {
 }
 
 export default function ProjectsPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -32,7 +35,10 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [addingDesc, setAddingDesc] = useState(false);
   const [newDesc, setNewDesc] = useState({ type: "overview", text: "" });
-
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     short_description: "",
@@ -77,7 +83,7 @@ export default function ProjectsPage() {
       setFormData({ name: "", short_description: "", repo_url: "", status: "active" });
       fetchProjects();
     } catch (err) {
-      alert("Failed to add project");
+      addToast("Failed to add project", "error");
     }
   };
 
@@ -90,18 +96,29 @@ export default function ProjectsPage() {
       setFormData({ name: "", short_description: "", repo_url: "", status: "active" });
       fetchProjects();
     } catch (err) {
-      alert("Failed to update project");
+      addToast("Failed to update project", "error");
     }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this project?")) return;
+    setProjectToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/v1/profile/projects/${id}`);
+      await api.delete(`/api/v1/profile/projects/${projectToDelete}`);
       fetchProjects();
+      addToast("Project deleted successfully", "success");
     } catch (err) {
-      alert("Failed to delete project");
+      addToast("Failed to delete project", "error");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setProjectToDelete(null);
     }
   };
 
@@ -126,7 +143,7 @@ export default function ProjectsPage() {
       setNewDesc({ type: "overview", text: "" });
       fetchProjectDetail(selectedProjectId);
     } catch (err) {
-      alert("Failed to add description");
+      addToast("Failed to add description", "error");
     }
   };
 
@@ -396,6 +413,15 @@ export default function ProjectsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Project"
+        message="Are you sure you want to delete this project? This will also remove any detailed sections associated with it."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

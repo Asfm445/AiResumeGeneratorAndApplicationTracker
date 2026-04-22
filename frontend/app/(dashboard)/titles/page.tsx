@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Plus, Trophy, Trash2, Pencil, Star, X, Save, AlertCircle } from "lucide-react";
 import api from "@/lib/api";
+import { useToastStore } from "@/lib/store";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 interface Title {
   id: string;
@@ -14,10 +16,14 @@ interface Title {
 }
 
 export default function TitlesPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [titleToDelete, setTitleToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -54,17 +60,28 @@ export default function TitlesPage() {
       setFormData({ name: "", description: "", priority: 1 });
       fetchTitles();
     } catch (err) {
-      alert("Failed to save title");
+      addToast("Failed to save title", "error");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this title?")) return;
+    setTitleToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!titleToDelete) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/v1/profile/titles/${id}`);
+      await api.delete(`/api/v1/profile/titles/${titleToDelete}`);
       fetchTitles();
+      addToast("Title deleted successfully", "success");
     } catch (err) {
-      alert("Failed to delete title");
+      addToast("Failed to delete title", "error");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setTitleToDelete(null);
     }
   };
 
@@ -218,6 +235,15 @@ export default function TitlesPage() {
           </Card>
         ))}
       </div>
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Title"
+        message="Are you sure you want to delete this target title?"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Wrench, Plus, Trash2, X } from "lucide-react";
 import api from "@/lib/api";
+import { useToastStore } from "@/lib/store";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 interface SkillGroup {
   id: string;
@@ -14,9 +16,14 @@ interface SkillGroup {
 }
 
 export default function SkillsPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const [formData, setFormData] = useState({
     skill_type: "",
     skills: [] as string[],
@@ -63,24 +70,43 @@ export default function SkillsPage() {
       setShowAdd(false);
       setFormData({ skill_type: "", skills: [] });
       fetchSkills();
+      addToast("Skills saved successfully", "success");
     } catch (err) {
-      alert("Failed to save skills");
+      addToast("Failed to save skills", "error");
     }
   };
 
-  const handleDeleteGroup = async (id: string) => {
-    if (confirm("Delete this skill group?")) {
-      try {
-        await api.delete(`/api/v1/profile/skills/${id}`);
-        fetchSkills();
-      } catch (err) {
-        alert("Failed to delete skills");
-      }
+  const handleDeleteGroup = (id: string) => {
+    setGroupToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!groupToDelete) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/api/v1/profile/skills/${groupToDelete}`);
+      fetchSkills();
+      addToast("Skill group deleted", "success");
+    } catch (err) {
+      addToast("Failed to delete skills", "error");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setGroupToDelete(null);
     }
   };
 
   return (
     <div className="space-y-6">
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Skill Group"
+        description="Are you sure you want to delete this skill group? This action cannot be undone."
+        isLoading={isDeleting}
+      />
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Skills</h1>

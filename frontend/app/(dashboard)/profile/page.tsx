@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { User, MapPin, Briefcase, Info, Save, Pencil, X, Calendar } from "lucide-react";
 import api from "@/lib/api";
+import { useToastStore } from "@/lib/store";
 
 export default function ProfilePage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -55,8 +57,9 @@ export default function ProfilePage() {
       await api.put("/api/v1/profile/", editedProfile);
       setProfile(editedProfile);
       setIsEditing(false);
+      addToast("Profile updated successfully", "success");
     } catch (err) {
-      alert("Failed to update profile");
+      addToast("Failed to update profile", "error");
     } finally {
       setSaving(false);
     }

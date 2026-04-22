@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Plus, Briefcase, Trash2, Pencil, Link as LinkIcon, MapPin, Globe, Save, X, Sparkles, FileText } from "lucide-react";
 import api from "@/lib/api";
+import { useToastStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 interface Job {
   id: number;
@@ -19,11 +21,15 @@ interface Job {
 }
 
 export default function JobsPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [formData, setFormData] = useState({
     job_title: "",
@@ -62,17 +68,28 @@ export default function JobsPage() {
       setFormData({ job_title: "", company_name: "", job_description: "", url: "", location: "" });
       fetchJobs();
     } catch (err) {
-      alert("Failed to save job");
+      addToast("Failed to save job", "error");
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this job?")) return;
+    setJobToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!jobToDelete) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/v1/profile/jobs/${id}`);
+      await api.delete(`/api/v1/profile/jobs/${jobToDelete}`);
       fetchJobs();
+      addToast("Job deleted successfully", "success");
     } catch (err) {
-      alert("Failed to delete job");
+      addToast("Failed to delete job", "error");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setJobToDelete(null);
     }
   };
 
@@ -270,6 +287,15 @@ export default function JobsPage() {
           </Card>
         ))}
       </div>
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Job"
+        message="Are you sure you want to delete this job? This will also remove any tailored resumes associated with it."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

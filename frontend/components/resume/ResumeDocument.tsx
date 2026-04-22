@@ -135,7 +135,7 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
             const company = exp.company || exp.company_name || exp.organization;
             const dates = exp.dates || (exp.start_date && exp.end_date ? `${exp.start_date} - ${exp.end_date}` : exp.start_date || exp.end_date);
             const stack = exp.technologies || exp.tech_stack || exp.stack || exp.tools;
-            const points = exp.bullet_points || exp.responsibilities || exp.achievements || exp.short_description || exp.description || exp.highlights;
+            const points = exp.bullets || exp.bullet_points || exp.responsibilities || exp.achievements || exp.short_description || exp.description || exp.highlights;
 
             return (
               <div key={i}>
@@ -193,7 +193,7 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
             const role = proj.role || proj.job_title || proj.position;
             const dates = proj.dates || (proj.start_date && proj.end_date ? `${proj.start_date} - ${proj.end_date}` : proj.start_date || proj.end_date);
             const stack = proj.technologies || proj.tech_stack || proj.stack || proj.tools;
-            const points = proj.bullet_points || proj.description || proj.key_achievements || proj.achievements || proj.highlights || proj.short_description;
+            const points = proj.bullets || proj.bullet_points || proj.description || proj.key_achievements || proj.achievements || proj.highlights || proj.short_description;
 
             return (
               <div key={i}>
@@ -255,7 +255,9 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
         <div className="space-y-2">
           {Object.entries(data?.skills || {}).map(([type, list]) => (
             <div key={type} className="flex items-start text-xs border-l-2 border-[#e5e7eb] pl-4 py-1">
-              <span className="font-bold text-[#1e1b4b] uppercase tracking-tighter min-w-[150px] pt-0.5">{type}</span>
+              <span className="font-bold text-[#1e1b4b] uppercase tracking-tighter min-w-[150px] pt-0.5">
+                {type.replace(/_/g, ' ')}
+              </span>
               <div className="flex-grow">
                 {isEditable ? (
                     <input 

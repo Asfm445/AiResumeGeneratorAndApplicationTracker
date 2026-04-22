@@ -197,6 +197,9 @@ class AiService(AiServiceInterface):
         return result if isinstance(result, dict) else {}
 
     async def tailor_resume_to_jd(self, profile_data: Dict, job_description: str, job_title: Optional[str] = None, company_name: Optional[str] = None) -> Dict[str, Any]:
+
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        print(job_description, job_title)
         job_info = f"JOB TITLE: {job_title}\n" if job_title else ""
         job_info += f"COMPANY NAME: {company_name}\n" if company_name else ""
         
@@ -212,15 +215,15 @@ class AiService(AiServiceInterface):
             {json.dumps(profile_data, indent=2)}
             
             CRITICAL INSTRUCTIONS:
-            1. **Headline:** Generate an impactful headline specifically matching the job title and core requirements in the JD.
-            2. **Summary:** Write a 3-4 line summary highlighting the user's skills and projects that directly address the "Must-have" and "Preferred" requirements of the JD.
-            3. **Experience:** Rephrase bullet points to emphasize impact and technologies requested in the JD. Use the JD's terminology where appropriate. For EACH experience, provide EXACTLY 3-4 bullet points.
+            1. **Headline:** Generate an impactful headline specifically matching the job title and core requirements in the Job Description.
+            2. **Summary:** Write a 3-4 line summary highlighting the user's skills and projects that directly address the "Must-have" and "Preferred" requirements of the Job Description that only found in user profile data.
+            3. **Experience:** Rephrase bullet points to emphasize impact and technologies requested in the Job Description. Use the Job Description's terminology where appropriate. For EACH experience, provide EXACTLY 3-4 bullet points.
             4. **Projects:** Select and highlight projects that demonstrate the specific technical competencies required for this role. For EACH project, provide EXACTLY 3-4 bullet points in the description.
-            5. **Skills:** Categorize and prioritize skills that are mentioned or highly relevant to the JD.
+            5. **Skills:** Categorize and prioritize skills that are mentioned or highly relevant to the Job Description.
             
             **ANTI-HALLUCINATION RULES:**
             - DO NOT ADD ANY SKILLS, TECHNOLOGIES, OR EXPERIENCES NOT FOUND IN THE PROVIDED PROFILE DATA.
-            - If the JD asks for a skill the user doesn't have, DO NOT invent it. Instead, emphasize related transferable skills.
+            - If the Job Description asks for a skill the user doesn't have, DO NOT invent it. Instead, emphasize related transferable skills.
             - The final resume must be 100% truthful based on the PROFILE DATA.
             
             Return the FULL tailored resume in JSON format with these exact keys:

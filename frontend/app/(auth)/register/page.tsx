@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import api from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
+import { useAuthStore, useToastStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
@@ -17,25 +17,20 @@ export default function RegisterPage() {
     password: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const addToast = useToastStore((state) => state.addToast);
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
-      const response = await api.post("/api/v1/auth/register", formData);
-      // Backend probably doesn't return token on register, but let's assume it returns user data
-      // and redirect to login or auto-login if token is available.
-      // Based on my view of auth_controller.py, it returns 'result'.
-      // If it doesn't return a token, we redirect to login.
-      alert("Registration successful! Please login.");
+      await api.post("/api/v1/auth/register", formData);
+      addToast("Registration successful! Please login.", "success");
       router.push("/login");
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Registration failed. Please try again.");
+      const message = err.response?.data?.detail || "Registration failed. Please try again.";
+      addToast(message, "error");
     } finally {
       setLoading(false);
     }
@@ -58,7 +53,6 @@ export default function RegisterPage() {
           </CardHeader>
           <form onSubmit={handleRegister}>
             <CardContent className="space-y-4">
-              {error && <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md">{error}</div>}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">First Name</label>

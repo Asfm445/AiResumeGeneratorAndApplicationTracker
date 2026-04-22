@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Briefcase, Plus, Trash2, Edit2 } from "lucide-react";
 import api from "@/lib/api";
+import { useToastStore } from "@/lib/store";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 interface Experience {
   id: string;
@@ -19,9 +21,14 @@ interface Experience {
 }
 
 export default function ExperiencesPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [experienceToDelete, setExperienceToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const [formData, setFormData] = useState({
     company_name: "",
     role_title: "",
@@ -63,23 +70,41 @@ export default function ExperiencesPage() {
       });
       fetchExperiences();
     } catch (err) {
-      alert("Failed to add experience");
+      addToast("Failed to add experience", "error");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this experience?")) {
-      try {
-        await api.delete(`/api/v1/profile/experiences/${id}`);
-        fetchExperiences();
-      } catch (err) {
-        alert("Failed to delete experience");
-      }
+  const handleDelete = (id: string) => {
+    setExperienceToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!experienceToDelete) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/api/v1/profile/experiences/${experienceToDelete}`);
+      fetchExperiences();
+      addToast("Experience deleted", "success");
+    } catch (err) {
+      addToast("Failed to delete experience", "error");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setExperienceToDelete(null);
     }
   };
 
   return (
     <div className="space-y-6">
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Experience"
+        description="Are you sure you want to delete this work experience? This action cannot be undone."
+        isLoading={isDeleting}
+      />
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Work Experience</h1>

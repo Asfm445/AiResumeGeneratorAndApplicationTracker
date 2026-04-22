@@ -11,11 +11,12 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { ResumeDocument } from "@/components/resume/ResumeDocument";
-import { useAuthStore } from "@/lib/store";
+import { useAuthStore, useToastStore } from "@/lib/store";
 import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { ResumeEvaluationReport } from "@/components/resume/ResumeEvaluationReport";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface EvaluationData {
@@ -59,6 +60,7 @@ interface Title {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function ResumeBuilderPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -86,6 +88,9 @@ export default function ResumeBuilderPage() {
   const [editedData, setEditedData] = useState<any>(null);
   const [showRefinePanel, setShowRefinePanel] = useState(false);
   const [refinementComment, setRefinementComment] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [resumeToDelete, setResumeToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Tailor modal
   const [showTailorModal, setShowTailorModal] = useState(false);
@@ -220,8 +225,9 @@ export default function ResumeBuilderPage() {
         : "/api/v1/resume/generate";
       const res = await api.get(url);
       await fetchResumesByTitle(selectedTitleId, res.data.data.id);
+      addToast("Resume generated successfully", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to generate resume.");
+      addToast(err.response?.data?.detail || "Failed to generate resume.", "error");
     } finally {
       setLoading(false);
     }
@@ -229,11 +235,11 @@ export default function ResumeBuilderPage() {
 
   const handleTailorResume = async () => {
     if (!isNewJob && !tailorJobId) {
-      alert("Please select a saved job or choose 'Paste New Job'.");
+      addToast("Please select a saved job or choose 'Paste New Job'.", "error");
       return;
     }
     if (isNewJob && (!newJobDescription.trim() || !newJobTitle.trim() || !newCompany.trim())) {
-      alert("Please fill in Company, Job Title and Job Description.");
+      addToast("Please fill in Company, Job Title and Job Description.", "error");
       return;
     }
 
@@ -271,8 +277,9 @@ export default function ResumeBuilderPage() {
       await fetchResumesByJob(resolvedJobId, newResume.id);
 
       router.push(`/resume-builder?job_id=${resolvedJobId}`);
+      addToast("Resume tailored successfully", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to tailor resume.");
+      addToast(err.response?.data?.detail || "Failed to tailor resume.", "error");
     } finally {
       setLoading(false);
     }
@@ -287,20 +294,23 @@ export default function ResumeBuilderPage() {
   };
 
   const handleRefine = async (customComment?: string) => {
-    const comment = customComment || refinementComment;
-    if (!comment.trim() || !selectedResume) return;
+    // If called from onClick directly, customComment might be the event object
+    const actualComment = typeof customComment === "string" ? customComment : refinementComment;
+    if (!actualComment || !actualComment.trim() || !selectedResume) return;
+    
     setRefining(true);
     try {
       const res = await api.post(`/api/v1/resume/refine/${selectedResume.id}`, {
-        comment: comment,
+        comment: actualComment,
       });
       const newResume = res.data.data;
       setRefinementComment("");
       setShowRefinePanel(false);
       setEvaluation(null); // Clear evaluation for the new version
       await refreshCurrentList(newResume.id);
+      addToast("Resume refined successfully", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to refine resume.");
+      addToast(err.response?.data?.detail || "Failed to refine resume.", "error");
     } finally {
       setRefining(false);
     }
@@ -308,7 +318,7 @@ export default function ResumeBuilderPage() {
 
   const handleEvaluate = async () => {
     if (!selectedResume) {
-      alert("Please select a resume to evaluate.");
+      addToast("Please select a resume to evaluate.", "error");
       return;
     }
     setEvaluating(true);
@@ -318,8 +328,9 @@ export default function ResumeBuilderPage() {
         resume_id: selectedResume.id,
       });
       setEvaluation(res.data.data);
+      addToast("Evaluation completed", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to evaluate resume.");
+      addToast(err.response?.data?.detail || "Failed to evaluate resume.", "error");
     } finally {
       setEvaluating(false);
     }
@@ -332,29 +343,38 @@ export default function ResumeBuilderPage() {
       await api.put(`/api/v1/resume/${selectedResume.id}`, { resume_data: editedData });
       setIsEditing(false);
       await refreshCurrentList(selectedResume.id);
+      addToast("Resume saved successfully", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to save edits.");
+      addToast(err.response?.data?.detail || "Failed to save edits.", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteResume = async (e: React.MouseEvent, resumeId: number) => {
+  const handleDeleteResume = (e: React.MouseEvent, resumeId: number) => {
     e.stopPropagation();
-    if (!confirm("Delete this resume version? This cannot be undone.")) return;
-    setLoading(true);
+    setResumeToDelete(resumeId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteResume = async () => {
+    if (resumeToDelete === null) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/v1/resume/${resumeId}`);
-      const updated = resumes.filter((r) => r.id !== resumeId);
+      await api.delete(`/api/v1/resume/${resumeToDelete}`);
+      const updated = resumes.filter((r) => r.id !== resumeToDelete);
       setResumes(updated);
-      if (selectedResume?.id === resumeId) {
+      if (selectedResume?.id === resumeToDelete) {
         setSelectedResume(null);
         setIsEditing(false);
       }
+      addToast("Resume deleted", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to delete resume.");
+      addToast(err.response?.data?.detail || "Failed to delete resume.", "error");
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setResumeToDelete(null);
     }
   };
 
@@ -366,6 +386,7 @@ export default function ResumeBuilderPage() {
       );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      addToast("Copied to clipboard", "success");
     }
   };
 
@@ -380,8 +401,9 @@ export default function ResumeBuilderPage() {
         x: 0, y: 0, width: 595, windowWidth: 816, autoPaging: "text",
         html2canvas: { scale: 0.729, useCORS: true, logging: false },
       });
+      addToast("Downloading PDF...", "success");
     } catch {
-      alert("Failed to generate PDF.");
+      addToast("Failed to generate PDF.", "error");
     } finally {
       setDownloading(false);
     }
@@ -1018,6 +1040,15 @@ export default function ResumeBuilderPage() {
           </Card>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDeleteResume}
+        title="Delete Resume"
+        message="Are you sure you want to delete this resume version? This cannot be undone."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

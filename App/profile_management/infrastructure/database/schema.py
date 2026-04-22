@@ -166,6 +166,7 @@ class GeneratedResume(Base):
 
     title = relationship("Title", back_populates="resumes")
     job = relationship("Job", back_populates="resumes")
+    evaluations = relationship("ResumeEvaluation", back_populates="resume", cascade="all, delete-orphan")
 
 
 class ResumeEvaluation(Base):
@@ -173,7 +174,7 @@ class ResumeEvaluation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(255), nullable=False, index=True)
-    resume_id = Column(Integer, ForeignKey('generated_resumes.id'), nullable=False)
+    resume_id = Column(Integer, ForeignKey('generated_resumes.id', ondelete='CASCADE'), nullable=False)
     job_id = Column(Integer, ForeignKey('jobs.id'), nullable=True)
     title_id = Column(Integer, ForeignKey('titles.id'), nullable=True)
 
@@ -188,7 +189,7 @@ class ResumeEvaluation(Base):
 
     created_at = Column(DateTime, nullable=False)
 
-    resume = relationship("GeneratedResume")
+    resume = relationship("GeneratedResume", back_populates="evaluations")
     job = relationship("Job")
     title = relationship("Title")
 

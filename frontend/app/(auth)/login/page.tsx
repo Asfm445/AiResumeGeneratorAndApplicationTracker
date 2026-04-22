@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import api from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
+import { useAuthStore, useToastStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -15,14 +15,13 @@ export default function LoginPage() {
     password: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const setAuth = useAuthStore((state) => state.setAuth);
+  const addToast = useToastStore((state) => state.addToast);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
       const response = await api.post("/api/v1/auth/login", formData);
@@ -42,9 +41,11 @@ export default function LoginPage() {
       };
       
       setAuth(user, access_token, refresh_token);
+      addToast("Login successful!", "success");
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Login failed. Please check your credentials.");
+      const message = err.response?.data?.detail || "Login failed. Please check your credentials.";
+      addToast(message, "error");
     } finally {
       setLoading(false);
     }
@@ -67,7 +68,6 @@ export default function LoginPage() {
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
-              {error && <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md">{error}</div>}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
                 <Input 
