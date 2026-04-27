@@ -16,8 +16,28 @@ class UserProfile(Base):
     headline = Column(String(255))
     about_text = Column(Text)
     location = Column(String(255))
+    phone = Column(String(50))
+    linkedin_url = Column(String(255))
+    github_url = Column(String(255))
     years_of_experience = Column(Integer, default=0)
     profile_picture = Column(String(255))
+
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+
+class Education(Base):
+    __tablename__ = 'education'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(255), nullable=False, index=True)
+
+    school = Column(String(255), nullable=False)
+    degree = Column(String(255), nullable=False)
+    field_of_study = Column(String(255))
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=True)
+    relevant_courses = Column(JSON, nullable=True) # List of strings
 
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)

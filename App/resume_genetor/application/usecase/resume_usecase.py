@@ -1,5 +1,5 @@
-from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, SkillRepository, ProjectRepository, ExprianceRepository, ResumeRepository, JobRepository, EvaluationRepository
-from App.profile_management.domain.entities.models import UserProfile, GeneratedResume, Job, ResumeEvaluation
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, SkillRepository, ProjectRepository, ExprianceRepository, ResumeRepository, JobRepository, EvaluationRepository, EducationRepository
+from App.profile_management.domain.entities.models import UserProfile, GeneratedResume, Job, ResumeEvaluation, Education
 from App.resume_genetor.domain.interfaces.ai_service_interface import AiServiceInterface
 from App.resume_genetor.domain.models.model import TitleForAi
 from App.resume_genetor.domain.interfaces.embeding_service import EmbeddingService
@@ -16,7 +16,8 @@ class ResumeUseCase:
                  embedding_service: EmbeddingService,
                  resume_repo: ResumeRepository,
                  job_repo: JobRepository,
-                 evaluation_repo: EvaluationRepository
+                 evaluation_repo: EvaluationRepository,
+                 education_repo: EducationRepository
                  ):
         self.profile_repo = profile_repo
         self.ai_service = ai_service
@@ -28,6 +29,7 @@ class ResumeUseCase:
         self.resume_repo = resume_repo
         self.job_repo = job_repo
         self.evaluation_repo = evaluation_repo
+        self.education_repo = education_repo
 
     async def _get_resume_input_data(self, user_id: str, title_id: Optional[int] = None) -> dict:
         # Fetch user profile and related data
@@ -37,6 +39,7 @@ class ResumeUseCase:
         
         titles = await self.title_repo.get_all(user_id)
         skills = await self.skill_repo.get_all(user_id)
+        education = await self.education_repo.get_all(user_id)
         
         target_title_obj = None
         if title_id:
@@ -77,6 +80,16 @@ class ResumeUseCase:
                 "headline": profile.headline,
                 "bio": profile.about_text,
                 "skills": [{"skill_type": s.skill_type, "skills": s.skills} for s in skills],
+                "education": [
+                    {
+                        "school": e.school,
+                        "degree": e.degree,
+                        "field_of_study": e.field_of_study,
+                        "start_date": e.start_date.strftime("%Y-%m") if e.start_date else "",
+                        "end_date": e.end_date.strftime("%Y-%m") if e.end_date else "Present",
+                        "relevant_courses": e.relevant_courses
+                    } for e in education
+                ],
                 "projects": [
                     {
                         "name": p.name,
@@ -111,6 +124,10 @@ class ResumeUseCase:
             "name": profile.name,
             "email": profile.email,
             "location": profile.location,
+            "phone": profile.phone,
+            "linkedin": profile.linkedin_url,
+            "github": profile.github_url,
+            "education": data["ai_input_data"]["education"],
             **ai_generated_resume
         }
 
@@ -143,10 +160,21 @@ class ResumeUseCase:
         skills = await self.skill_repo.get_all(user_id)
 
         expriances = await self.expriance_repo.get_all(user_id)
+        education = await self.education_repo.get_all(user_id)
 
         ai_input_data = {
             "user_bio": profile.about_text,
             "skills": [{"skill_type": s.skill_type, "skills": s.skills} for s in skills],
+            "education": [
+                    {
+                        "school": e.school,
+                        "degree": e.degree,
+                        "field_of_study": e.field_of_study,
+                        "start_date": e.start_date.strftime("%Y-%m") if e.start_date else "",
+                        "end_date": e.end_date.strftime("%Y-%m") if e.end_date else "Present",
+                        "relevant_courses": e.relevant_courses
+                    } for e in education
+                ],
             "projects": [
                     {
                         "name": p.name,
@@ -172,6 +200,10 @@ class ResumeUseCase:
             "name": profile.name,
             "email": profile.email,
             "location": profile.location,
+            "phone": profile.phone,
+            "linkedin": profile.linkedin_url,
+            "github": profile.github_url,
+            "education": ai_input_data["education"],
             **ai_generated_resume
         }
         

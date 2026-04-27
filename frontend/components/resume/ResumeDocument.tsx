@@ -6,9 +6,13 @@ interface ResumeData {
   headline?: string;
   email?: string;
   location?: string;
+  phone?: string;
+  github?: string;
+  linkedin?: string;
   professional_summary: string;
   professional_experience: any[];
   projects: any[];
+  education?: any[];
   skills: Record<string, string[]>;
 }
 
@@ -254,6 +258,36 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
           })}
         </div>
       </section>
+
+      {/* Education */}
+      {(data?.education && data.education.length > 0) && (
+        <section className="mb-8 font-sans">
+          <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-4 pb-1 tracking-widest">Education</h2>
+          <div className="space-y-4">
+            {data.education.map((edu, i) => (
+              <div key={i}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <span className="font-bold text-sm text-[#0f172a]">{edu.degree} {edu.field_of_study ? `in ${edu.field_of_study}` : ''}</span>
+                  <span className="text-xs text-[#6b7280] italic font-serif uppercase tracking-tighter">{edu.dates || `${edu.start_date} - ${edu.end_date || 'Present'}`}</span>
+                </div>
+                <div className="text-sm font-bold text-[#1e1b4b] uppercase tracking-tight">{edu.school || edu.institution}</div>
+                {edu.relevant_courses && (
+                  <div className="text-[10px] text-[#6b7280] mt-1 font-serif italic">
+                    <span className="font-bold uppercase not-italic mr-1">Relevant Coursework:</span>
+                    {Array.isArray(edu.relevant_courses) ? edu.relevant_courses.join(', ') : edu.relevant_courses}
+                  </div>
+                )}
+                {edu.relevant_coursework && (
+                  <div className="text-[10px] text-[#6b7280] mt-1 font-serif italic">
+                    <span className="font-bold uppercase not-italic mr-1">Relevant Coursework:</span>
+                    {edu.relevant_coursework}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Skills */}
       <section className="mb-8 font-sans">

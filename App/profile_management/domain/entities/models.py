@@ -10,8 +10,24 @@ class UserProfile:
     headline: Optional[str] = None
     about_text: Optional[str] = None
     location: Optional[str] = None
+    phone: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
     years_of_experience: int = 0
     profile_picture: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    id: Optional[int] = None
+
+@dataclass
+class Education:
+    user_id: str
+    school: str
+    degree: str
+    field_of_study: Optional[str] = None
+    start_date: datetime = field(default_factory=datetime.utcnow)
+    end_date: Optional[datetime] = None
+    relevant_courses: List[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     id: Optional[int] = None

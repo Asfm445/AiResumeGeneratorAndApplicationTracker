@@ -109,7 +109,8 @@ class AiService(AiServiceInterface):
             3. Highlight relevant projects and skills from the user's data that prove competence in the Target Role.
             4. Minimize or omit background info that contradicts the Target Role unless it can be framed as a complementary technical strength.
             5. Don't use exaggerating words like 'passionate' or 'highly motivated'.
-            6. **ANTI-HALLUCINATION:** DO NOT invent experiences, technologies, or impact that the user has not provided. If a skill is missing from the data, DO NOT mention it in the summary.
+            6. **ATS OPTIMIZATION:** Include high-frequency keywords relevant to the target role.
+            7. **ANTI-HALLUCINATION:** DO NOT invent experiences, technologies, or impact that the user has not provided. If a skill is missing from the data, DO NOT mention it in the summary.
             
             Return JSON in this format:
             {{
@@ -126,6 +127,10 @@ class AiService(AiServiceInterface):
             
             CRITICAL INSTRUCTION: Your goal is to make the experience highly relevant to the Target Role.
             If the target is '{target_title}' but the experience was in a different area, focus on crossover skills.
+            
+            **XYZ FORMULA:** Rephrase every bullet point using the Google XYZ formula:
+            "Accomplished [X] as measured by [Y], by doing [Z]"
+            (X: what you did, Y: how it was measured/result, Z: what tools/actions you took).
             
             **ANTI-HALLUCINATION:** 
             - DO NOT add new technologies, tools, or responsibilities that are not in the original experience data.
@@ -155,8 +160,9 @@ class AiService(AiServiceInterface):
             Target Role Description: {target_description or "N/A"}
             
             CRITICAL INSTRUCTION: Rephrase project descriptions to highlight skills relevant to the Target Role.
-            For example, if the target is Backend but the project is a React app, emphasize the state management logic, 
-            API consumption, performance optimizations, or any architectural decisions rather than just UI/UX.
+            
+            **XYZ FORMULA:** Rephrase every bullet point using the Google XYZ formula:
+            "Accomplished [X] as measured by [Y], by doing [Z]"
             
             For EACH project, provide EXACTLY 3-4 bullet points in the description.
             Highlight role, tech stack, and outcomes.

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { User, MapPin, Briefcase, Info, Save, Pencil, X, Calendar } from "lucide-react";
+import { User, MapPin, Briefcase, Info, Save, Pencil, X, Calendar, Phone, Linkedin, Github } from "lucide-react";
 import api from "@/lib/api";
 import { useToastStore } from "@/lib/store";
 
@@ -19,6 +19,9 @@ export default function ProfilePage() {
     bio: "",
     location: "",
     yearsOfExperience: 0,
+    phone: "",
+    linkedinUrl: "",
+    githubUrl: "",
   });
   const [editedProfile, setEditedProfile] = useState({ ...profile });
 
@@ -54,7 +57,7 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.put("/api/v1/profile/", editedProfile);
+      await api.patch("/api/v1/profile/", editedProfile);
       setProfile(editedProfile);
       setIsEditing(false);
       addToast("Profile updated successfully", "success");
@@ -109,6 +112,24 @@ export default function ProfilePage() {
                   <Briefcase size={16} className="text-primary" />
                   <span>{profile.yearsOfExperience} Years Experience</span>
                 </div>
+                {profile.phone && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone size={16} className="text-primary" />
+                    <span>{profile.phone}</span>
+                  </div>
+                )}
+                {profile.linkedinUrl && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Linkedin size={16} className="text-primary" />
+                    <span className="truncate max-w-[150px]">{profile.linkedinUrl.replace('https://', '')}</span>
+                  </div>
+                )}
+                {profile.githubUrl && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Github size={16} className="text-primary" />
+                    <span className="truncate max-w-[150px]">{profile.githubUrl.replace('https://', '')}</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -210,6 +231,40 @@ export default function ProfilePage() {
                   type="number"
                   value={editedProfile.yearsOfExperience}
                   onChange={(e) => setEditedProfile({...editedProfile, yearsOfExperience: parseInt(e.target.value) || 0})}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Phone size={14} className="text-muted-foreground" /> Phone Number
+                  </label>
+                  <Input 
+                    value={editedProfile.phone}
+                    onChange={(e) => setEditedProfile({...editedProfile, phone: e.target.value})}
+                    placeholder="+1 (555) 000-0000" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Linkedin size={14} className="text-muted-foreground" /> LinkedIn URL
+                  </label>
+                  <Input 
+                    value={editedProfile.linkedinUrl}
+                    onChange={(e) => setEditedProfile({...editedProfile, linkedinUrl: e.target.value})}
+                    placeholder="https://linkedin.com/in/username" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Github size={14} className="text-muted-foreground" /> GitHub URL
+                </label>
+                <Input 
+                  value={editedProfile.githubUrl}
+                  onChange={(e) => setEditedProfile({...editedProfile, githubUrl: e.target.value})}
+                  placeholder="https://github.com/username" 
                 />
               </div>
             </CardContent>

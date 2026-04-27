@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 from App.profile_management.infrastructure.database.database import get_db
 from App.api.auth import get_current_user_id
-from App.api.profile_management.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, TitleUpdate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse, DescriptionCreate, ExprianceCreate, ExprianceUpdate, ExprianceResponse, SkillCreate, SkillUpdate, SkillResponse, JobCreate, JobUpdate, JobResponse, ParseJobRequest
-from typing import List
+from App.api.profile_management.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, TitleUpdate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse, DescriptionCreate, ExprianceCreate, ExprianceUpdate, ExprianceResponse, SkillCreate, SkillUpdate, SkillResponse, JobCreate, JobUpdate, JobResponse, ParseJobRequest, EducationCreate, EducationUpdate, EducationResponse
 
 router = APIRouter(
     prefix="/api/v1/profile"
@@ -11,6 +11,55 @@ router = APIRouter(
 
 def get_controller(db: AsyncSession = Depends(get_db)):
     return ProfileController(db)
+
+@router.post("/education", response_model=EducationResponse, tags=["Education"])
+async def create_education(
+    education: EducationCreate,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    return await controller.create_education(user_id, education)
+
+@router.get("/education", response_model=List[EducationResponse], tags=["Education"])
+async def list_education(
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    return await controller.list_education(user_id)
+
+@router.get("/education/{education_id}", response_model=EducationResponse, tags=["Education"])
+async def get_education(
+    education_id: int,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    edu = await controller.get_education(education_id)
+    if not edu:
+         raise HTTPException(status_code=404, detail="Education not found")
+    return edu
+
+@router.put("/education/{education_id}", response_model=EducationResponse, tags=["Education"])
+async def update_education(
+    education_id: int,
+    education: EducationUpdate,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    updated = await controller.update_education(education_id, user_id, education)
+    if not updated:
+         raise HTTPException(status_code=404, detail="Education not found or unauthorized")
+    return updated
+
+@router.delete("/education/{education_id}", tags=["Education"])
+async def delete_education(
+    education_id: int,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    success = await controller.delete_education(education_id, user_id)
+    if not success:
+         raise HTTPException(status_code=404, detail="Education not found or unauthorized")
+    return {"message": "Education deleted"}
 
 @router.post("/jobs", response_model=JobResponse, tags=["Jobs"])
 async def create_job(
@@ -73,7 +122,7 @@ async def parse_job(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/", response_model=ProfileResponse, tags=["Profile"])
+@router.patch("/", response_model=ProfileResponse, tags=["Profile"])
 async def update_profile(
     profile: ProfileUpdate, 
     user_id: str = Depends(get_current_user_id),

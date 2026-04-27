@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -30,6 +31,7 @@ const groups = [
     title: "Knowledge Base",
     items: [
       { label: "Profile", icon: User, href: "/profile" },
+      { label: "Education", icon: GraduationCap, href: "/education" },
       { label: "Experiences", icon: Briefcase, href: "/experiences" },
       { label: "Skills", icon: Wrench, href: "/skills" },
       { label: "Projects", icon: FolderKanban, href: "/projects" },

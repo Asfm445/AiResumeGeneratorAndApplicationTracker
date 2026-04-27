@@ -7,11 +7,40 @@ from App.profile_management.application.use_cases.tag_use_cases import CreateTag
 from App.profile_management.application.use_cases.experience_use_cases import CreateExprianceUseCase, UpdateExprianceUseCase, ListExpriancesUseCase, GetExprianceUseCase, DeleteExprianceUseCase
 from App.profile_management.application.use_cases.skill_use_cases import CreateSkillUseCase, UpdateSkillUseCase, ListSkillsUseCase, GetSkillUseCase, DeleteSkillUseCase
 from App.profile_management.application.use_cases.job_use_cases import JobUseCase
-from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository, SqlAlchemyJobRepository
+from App.profile_management.application.use_cases.education_use_cases import EducationUseCase
+from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository, SqlAlchemyJobRepository, SqlAlchemyEducationRepository
 from App.resume_genetor.infrastructure.services.ai_service import AiService
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+
+class EducationCreate(BaseModel):
+    school: str
+    degree: str
+    field_of_study: Optional[str] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    relevant_courses: Optional[List[str]] = None
+
+class EducationUpdate(BaseModel):
+    school: str
+    degree: str
+    field_of_study: Optional[str] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    relevant_courses: Optional[List[str]] = None
+
+class EducationResponse(BaseModel):
+    id: int
+    school: str
+    degree: str
+    field_of_study: Optional[str] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    relevant_courses: Optional[List[str]] = None
+
+    class Config:
+        from_attributes = True
 
 class ParseJobRequest(BaseModel):
     raw_text: str
@@ -93,11 +122,14 @@ class SkillResponse(BaseModel):
         from_attributes = True
 
 class ProfileUpdate(BaseModel):
-    fullName: str
+    fullName: Optional[str] = None
     headline: Optional[str] = None
     bio: Optional[str] = None 
     location: Optional[str] = None
-    yearsOfExperience: Optional[int] = 0
+    yearsOfExperience: Optional[int] = None
+    phone: Optional[str] = None
+    linkedinUrl: Optional[str] = None
+    githubUrl: Optional[str] = None
 
 class ProfileResponse(BaseModel):
     id: str
@@ -108,6 +140,9 @@ class ProfileResponse(BaseModel):
     bio: Optional[str] = None 
     location: Optional[str] = None
     yearsOfExperience: Optional[int] = 0
+    phone: Optional[str] = None
+    linkedinUrl: Optional[str] = None
+    githubUrl: Optional[str] = None
     titles: Optional[List[dict]] = None
 
 class TitleCreate(BaseModel):
@@ -196,8 +231,51 @@ class ProfileController:
         self.get_skill_uc = GetSkillUseCase(skill_repo)
         self.delete_skill_uc = DeleteSkillUseCase(skill_repo)
 
+        education_repo = SqlAlchemyEducationRepository(db)
+        self.education_uc = EducationUseCase(education_repo)
+
         self.job_uc = JobUseCase(job_repo)
         self.ai_service = AiService()
+
+    async def create_education(self, user_id: str, data: EducationCreate):
+        edu = await self.education_uc.create_education(
+            user_id=user_id,
+            school=data.school,
+            degree=data.degree,
+            field_of_study=data.field_of_study,
+            start_date=data.start_date,
+            end_date=data.end_date,
+            relevant_courses=data.relevant_courses
+        )
+        return EducationResponse.model_validate(edu)
+
+    async def update_education(self, education_id: int, user_id: str, data: EducationUpdate):
+        edu = await self.education_uc.update_education(
+            education_id=education_id,
+            user_id=user_id,
+            school=data.school,
+            degree=data.degree,
+            field_of_study=data.field_of_study,
+            start_date=data.start_date,
+            end_date=data.end_date,
+            relevant_courses=data.relevant_courses
+        )
+        if not edu:
+            return None
+        return EducationResponse.model_validate(edu)
+
+    async def list_education(self, user_id: str):
+        edus = await self.education_uc.get_all_education(user_id)
+        return [EducationResponse.model_validate(e) for e in edus]
+
+    async def get_education(self, education_id: int):
+        edu = await self.education_uc.get_education(education_id)
+        if not edu:
+            return None
+        return EducationResponse.model_validate(edu)
+
+    async def delete_education(self, education_id: int, user_id: str):
+        return await self.education_uc.delete_education(education_id, user_id)
 
     async def create_job(self, user_id: str, data: JobCreate):
         job = await self.job_uc.create_job(
@@ -248,7 +326,10 @@ class ProfileController:
             headline=data.headline,
             bio=data.bio,
             location=data.location,
-            years=data.yearsOfExperience or 0
+            years=data.yearsOfExperience,
+            phone=data.phone,
+            linkedin=data.linkedinUrl,
+            github=data.githubUrl
         )
         return ProfileResponse(
             id=str(saved_profile.id) if saved_profile.id else "0",
@@ -258,7 +339,10 @@ class ProfileController:
             updatedAt=saved_profile.updated_at,
             bio=saved_profile.about_text,
             location=saved_profile.location,
-            yearsOfExperience=saved_profile.years_of_experience
+            yearsOfExperience=saved_profile.years_of_experience,
+            phone=saved_profile.phone,
+            linkedinUrl=saved_profile.linkedin_url,
+            githubUrl=saved_profile.github_url
         )
 
     async def get_profile(self, user_id: str):
@@ -273,6 +357,9 @@ class ProfileController:
             bio=profile.about_text,
             location=profile.location,
             yearsOfExperience=profile.years_of_experience,
+            phone=profile.phone,
+            linkedinUrl=profile.linkedin_url,
+            githubUrl=profile.github_url,
             titles=[], 
             updatedAt=profile.updated_at
         )

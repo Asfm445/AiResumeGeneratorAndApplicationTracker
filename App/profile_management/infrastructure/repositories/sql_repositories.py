@@ -2,10 +2,86 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, func, update
 from sqlalchemy.orm import selectinload
-from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill, GeneratedResume, Job, ResumeEvaluation
-from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository, ResumeRepository, JobRepository, EvaluationRepository
-from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill, GeneratedResume as DBGeneratedResume, Job as DBJob, ResumeEvaluation as DBResumeEvaluation
+from App.profile_management.domain.entities.models import UserProfile, Title, Project, Tag, ProjectEmbedding, ProjectDescription, Expriance, Skill, GeneratedResume, Job, ResumeEvaluation, Education
+from App.profile_management.domain.interfaces.repositories import ProfileRepository, TitleRepository, ProjectRepository, TagRepository, ExprianceRepository, SkillRepository, ResumeRepository, JobRepository, EvaluationRepository, EducationRepository
+from App.profile_management.infrastructure.database.schema import UserProfile as DBUserProfile, Title as DBTitle, Project as DBProject, Tag as DBTag, TitleProject, TagProject, ProjectEmbedding as DBProjectEmbedding, Experience as DBExperience, Skill as DBSkill, GeneratedResume as DBGeneratedResume, Job as DBJob, ResumeEvaluation as DBResumeEvaluation, Education as DBEducation
 from datetime import datetime
+
+class SqlAlchemyEducationRepository(EducationRepository):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(self, education: Education) -> Education:
+        db_edu = DBEducation(
+            user_id=education.user_id,
+            school=education.school,
+            degree=education.degree,
+            field_of_study=education.field_of_study,
+            start_date=education.start_date,
+            end_date=education.end_date,
+            relevant_courses=education.relevant_courses,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        self.session.add(db_edu)
+        await self.session.commit()
+        await self.session.refresh(db_edu)
+        return self._to_domain(db_edu)
+
+    async def update(self, education: Education) -> Optional[Education]:
+        stmt = select(DBEducation).filter_by(id=education.id, user_id=education.user_id)
+        result = await self.session.execute(stmt)
+        db_edu = result.scalars().first()
+        if db_edu:
+            db_edu.school = education.school
+            db_edu.degree = education.degree
+            db_edu.field_of_study = education.field_of_study
+            db_edu.start_date = education.start_date
+            db_edu.end_date = education.end_date
+            db_edu.relevant_courses = education.relevant_courses
+            db_edu.updated_at = datetime.utcnow()
+            await self.session.commit()
+            await self.session.refresh(db_edu)
+            return self._to_domain(db_edu)
+        return None
+
+    async def get_all(self, user_id: str) -> List[Education]:
+        stmt = select(DBEducation).filter_by(user_id=user_id).order_by(DBEducation.start_date.desc())
+        result = await self.session.execute(stmt)
+        db_edus = result.scalars().all()
+        return [self._to_domain(e) for e in db_edus]
+
+    async def get_by_id(self, education_id: int) -> Optional[Education]:
+        stmt = select(DBEducation).filter_by(id=education_id)
+        result = await self.session.execute(stmt)
+        db_edu = result.scalars().first()
+        if db_edu:
+            return self._to_domain(db_edu)
+        return None
+
+    async def delete(self, education_id: int, user_id: str) -> bool:
+        stmt = select(DBEducation).filter_by(id=education_id, user_id=user_id)
+        result = await self.session.execute(stmt)
+        db_edu = result.scalars().first()
+        if db_edu:
+            await self.session.delete(db_edu)
+            await self.session.commit()
+            return True
+        return False
+
+    def _to_domain(self, db_edu: DBEducation) -> Education:
+        return Education(
+            id=db_edu.id,
+            user_id=db_edu.user_id,
+            school=db_edu.school,
+            degree=db_edu.degree,
+            field_of_study=db_edu.field_of_study,
+            start_date=db_edu.start_date,
+            end_date=db_edu.end_date,
+            relevant_courses=db_edu.relevant_courses or [],
+            created_at=db_edu.created_at,
+            updated_at=db_edu.updated_at
+        )
 
 class SqlAlchemyJobRepository(JobRepository):
     def __init__(self, session: AsyncSession):
@@ -95,6 +171,9 @@ class SqlAlchemyProfileRepository(ProfileRepository):
             db_profile.headline = profile.headline
             db_profile.about_text = profile.about_text
             db_profile.location = profile.location
+            db_profile.phone = profile.phone
+            db_profile.linkedin_url = profile.linkedin_url
+            db_profile.github_url = profile.github_url
             db_profile.years_of_experience = profile.years_of_experience
             db_profile.updated_at = datetime.utcnow()
         else:
@@ -105,6 +184,9 @@ class SqlAlchemyProfileRepository(ProfileRepository):
                 headline=profile.headline,
                 about_text=profile.about_text,
                 location=profile.location,
+                phone=profile.phone,
+                linkedin_url=profile.linkedin_url,
+                github_url=profile.github_url,
                 years_of_experience=profile.years_of_experience,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
@@ -133,6 +215,9 @@ class SqlAlchemyProfileRepository(ProfileRepository):
             headline=db_profile.headline,
             about_text=db_profile.about_text,
             location=db_profile.location,
+            phone=db_profile.phone,
+            linkedin_url=db_profile.linkedin_url,
+            github_url=db_profile.github_url,
             years_of_experience=db_profile.years_of_experience,
             profile_picture=db_profile.profile_picture,
             created_at=db_profile.created_at,
