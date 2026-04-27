@@ -339,4 +339,21 @@ class AiService(AiServiceInterface):
             """
         result = await self.send_message(prompt)
         return result.split(",")
+
+    async def parse_job_description(self, raw_text: str) -> Dict[str, Any]:
+        prompt = f"""
+            Extract the following details from this job description text:
+            1. Job Title
+            2. Company Name
+            3. Location (if available)
+            4. Job URL (if available)
+            5. Cleaned Job Description (main requirements and responsibilities)
+            
+            Raw Text:
+            {raw_text}
+            
+            Return ONLY a JSON object with these keys:
+            "job_title", "company_name", "location", "url", "job_description"
+            """
+        return await self.send_message(prompt)
             

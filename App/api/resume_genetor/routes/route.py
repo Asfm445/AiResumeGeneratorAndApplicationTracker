@@ -9,11 +9,9 @@ from App.resume_genetor.application.usecase.resume_usecase import ResumeUseCase
 
 class TailorResumeRequest(BaseModel):
     job_id: Optional[int] = None
-    # Optional fields if user wants to tailor without a saved job ID (one-off)
     job_description: Optional[str] = None
     job_title: Optional[str] = None
     company_name: Optional[str] = None
-    # Optional selection of which professional profile (Title) to use as base
     title_id: Optional[int] = None
 
 class RefineResumeRequest(BaseModel):

@@ -11,6 +11,7 @@ interface ConfirmModalProps {
   onConfirm: () => void;
   title?: string;
   message?: string;
+  description?: string;
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;
@@ -22,6 +23,7 @@ export const ConfirmModal = ({
   onConfirm,
   title = "Are you sure?",
   message = "This action cannot be undone.",
+  description,
   confirmText = "Delete",
   cancelText = "Cancel",
   isLoading = false,
@@ -52,8 +54,9 @@ export const ConfirmModal = ({
                   <CardTitle className="text-xl">{title}</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
                 <p className="text-muted-foreground">{message}</p>
+                {description && <p className="text-sm font-semibold text-destructive">{description}</p>}
               </CardContent>
               <CardFooter className="flex justify-end gap-3 pt-4">
                 <Button

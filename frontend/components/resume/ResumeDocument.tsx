@@ -109,9 +109,15 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
             comparisonValue={comparisonData?.headline}
           />
           <span className="text-[#9ca3af]">|</span>
+          <Input value={data?.email} onChange={(v: string) => handleChange('email', v)} className="font-semibold text-[#000000]" />
+          <span className="text-[#9ca3af]">|</span>
+          <Input value={data?.phone} onChange={(v: string) => handleChange('phone', v)} placeholder="Phone" />
+          <span className="text-[#9ca3af]">|</span>
           <Input value={data?.location} onChange={(v: string) => handleChange('location', v)} />
           <span className="text-[#9ca3af]">|</span>
-          <Input value={data?.email} onChange={(v: string) => handleChange('email', v)} className="font-semibold text-[#000000]" />
+          <Input value={data?.github} onChange={(v: string) => handleChange('github', v)} placeholder="GitHub" />
+          <span className="text-[#9ca3af]">|</span>
+          <Input value={data?.linkedin} onChange={(v: string) => handleChange('linkedin', v)} placeholder="LinkedIn" />
         </div>
       </header>
 

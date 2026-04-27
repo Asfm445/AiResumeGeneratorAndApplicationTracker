@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, Briefcase, Trash2, Pencil, Link as LinkIcon, MapPin, Globe, Save, X, Sparkles, FileText } from "lucide-react";
+import { Plus, Briefcase, Trash2, Pencil, Link as LinkIcon, MapPin, Globe, Save, X, Sparkles, FileText, Wand2, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { useToastStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
@@ -26,6 +26,9 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [rawText, setRawText] = useState("");
+  const [showExtract, setShowExtract] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<number | null>(null);
@@ -69,6 +72,29 @@ export default function JobsPage() {
       fetchJobs();
     } catch (err) {
       addToast("Failed to save job", "error");
+    }
+  };
+
+  const handleExtract = async () => {
+    if (!rawText.trim()) return;
+    setIsExtracting(true);
+    try {
+      const response = await api.post("/api/v1/profile/jobs/parse", { raw_text: rawText });
+      const data = response.data;
+      setFormData({
+        job_title: data.job_title || "",
+        company_name: data.company_name || "",
+        job_description: data.job_description || "",
+        url: data.url || "",
+        location: data.location || "",
+      });
+      setShowExtract(false);
+      setRawText("");
+      addToast("Job details extracted!", "success");
+    } catch (err) {
+      addToast("Failed to extract details", "error");
+    } finally {
+      setIsExtracting(false);
     }
   };
 
@@ -133,10 +159,51 @@ export default function JobsPage() {
       {isAdding && (
         <Card className="border-primary/20 shadow-xl animate-in slide-in-from-top-4 duration-300">
           <CardHeader className="bg-primary/5 border-b">
-            <CardTitle>{editingId ? "Edit Job Details" : "Add New Target Job"}</CardTitle>
-            <CardDescription>Save the job description here so you can generate tailored resumes for it later.</CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>{editingId ? "Edit Job Details" : "Add New Target Job"}</CardTitle>
+                <CardDescription>Save the job description here so you can generate tailored resumes for it later.</CardDescription>
+              </div>
+              {!editingId && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowExtract(!showExtract)}
+                  className="bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                >
+                  <Wand2 className="mr-2 h-4 w-4" /> 
+                  {showExtract ? "Hide AI Extract" : "Extract with AI"}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="pt-6">
+            {showExtract && (
+              <div className="mb-8 p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold text-sm">
+                  <Sparkles size={16} /> Paste the whole job posting text here
+                </div>
+                <textarea
+                  className="w-full min-h-[150px] p-3 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white"
+                  placeholder="Paste everything from LinkedIn, Indeed, etc..."
+                  value={rawText}
+                  onChange={(e) => setRawText(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={handleExtract} 
+                    disabled={isExtracting || !rawText.trim()}
+                    className="bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    {isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {isExtracting ? "Analyzing..." : "Extract Details"}
+                  </Button>
+                </div>
+                <div className="border-t border-indigo-100 pt-4 text-[10px] text-indigo-400 font-medium">
+                  AI will automatically fill the form below for you.
+                </div>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">

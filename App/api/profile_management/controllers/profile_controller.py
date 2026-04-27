@@ -8,9 +8,13 @@ from App.profile_management.application.use_cases.experience_use_cases import Cr
 from App.profile_management.application.use_cases.skill_use_cases import CreateSkillUseCase, UpdateSkillUseCase, ListSkillsUseCase, GetSkillUseCase, DeleteSkillUseCase
 from App.profile_management.application.use_cases.job_use_cases import JobUseCase
 from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository, SqlAlchemyJobRepository
+from App.resume_genetor.infrastructure.services.ai_service import AiService
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+
+class ParseJobRequest(BaseModel):
+    raw_text: str
 
 class JobCreate(BaseModel):
     job_title: str
@@ -193,6 +197,7 @@ class ProfileController:
         self.delete_skill_uc = DeleteSkillUseCase(skill_repo)
 
         self.job_uc = JobUseCase(job_repo)
+        self.ai_service = AiService()
 
     async def create_job(self, user_id: str, data: JobCreate):
         job = await self.job_uc.create_job(
@@ -231,6 +236,10 @@ class ProfileController:
 
     async def delete_job(self, job_id: int, user_id: str):
         return await self.job_uc.delete_job(job_id, user_id)
+
+    async def parse_job(self, data: ParseJobRequest):
+        parsed = await self.ai_service.parse_job_description(data.raw_text)
+        return parsed
 
     async def create_or_update_profile(self, user_id: str, data: ProfileUpdate):
         saved_profile = await self.create_profile_uc.execute(

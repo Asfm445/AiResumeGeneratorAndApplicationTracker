@@ -391,19 +391,31 @@ export default function ResumeBuilderPage() {
   };
 
   const downloadAsPdf = async () => {
-    const element = captureRef.current;
-    if (!element) return;
     setDownloading(true);
     try {
-      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      await pdf.html(element, {
-        callback: (doc) => doc.save(`${user?.name || "Resume"}_v${selectedResume?.version}.pdf`),
-        x: 0, y: 0, width: 595, windowWidth: 816, autoPaging: "text",
-        html2canvas: { scale: 0.729, useCORS: true, logging: false },
+      const dataToDownload = isEditing ? editedData : selectedResume?.resume_data;
+      const response = await fetch('/api/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToDownload),
       });
-      addToast("Downloading PDF...", "success");
-    } catch {
-      addToast("Failed to generate PDF.", "error");
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || "Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Resume_${selectedResume?.version}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      addToast("Resume downloaded!", "success");
+    } catch (err: any) {
+      console.error("Download error:", err);
+      addToast(err.message || "Failed to download PDF.", "error");
     } finally {
       setDownloading(false);
     }
@@ -644,7 +656,7 @@ export default function ResumeBuilderPage() {
                     <Button
                       size="sm"
                       className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                      onClick={handleRefine}
+                      onClick={() => handleRefine()}
                       disabled={refining || !refinementComment.trim()}
                     >
                       {refining ? (
@@ -671,7 +683,7 @@ export default function ResumeBuilderPage() {
             )}
 
             {/* Resume preview */}
-            <div className="bg-slate-200 dark:bg-slate-950 p-6 md:p-12 rounded-[2rem] border border-slate-200 dark:border-slate-800 overflow-x-auto shadow-inner relative">
+            <div id="resume-container" className="bg-slate-200 dark:bg-slate-950 p-6 md:p-12 rounded-[2rem] border border-slate-200 dark:border-slate-800 overflow-x-auto shadow-inner relative">
               {isEditing && (
                 <div className="absolute top-4 left-4 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm z-10 border border-amber-200 animate-pulse">
                   Manual Edit Mode — sections are editable inline

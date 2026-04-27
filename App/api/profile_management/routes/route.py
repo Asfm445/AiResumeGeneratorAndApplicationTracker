@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from App.profile_management.infrastructure.database.database import get_db
 from App.api.auth import get_current_user_id
-from App.api.profile_management.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, TitleUpdate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse, DescriptionCreate, ExprianceCreate, ExprianceUpdate, ExprianceResponse, SkillCreate, SkillUpdate, SkillResponse, JobCreate, JobUpdate, JobResponse
+from App.api.profile_management.controllers.profile_controller import ProfileController, ProfileUpdate, ProfileResponse, TitleCreate, TitleUpdate, ProjectCreate, TagCreate, TitleResponse, ProjectResponse, TagResponse, DescriptionCreate, ExprianceCreate, ExprianceUpdate, ExprianceResponse, SkillCreate, SkillUpdate, SkillResponse, JobCreate, JobUpdate, JobResponse, ParseJobRequest
 from typing import List
 
 router = APIRouter(
@@ -60,6 +60,17 @@ async def delete_job(
     if not success:
          raise HTTPException(status_code=404, detail="Job not found or unauthorized")
     return {"message": "Job deleted"}
+
+@router.post("/jobs/parse", tags=["Jobs"])
+async def parse_job(
+    data: ParseJobRequest,
+    user_id: str = Depends(get_current_user_id),
+    controller: ProfileController = Depends(get_controller)
+):
+    try:
+        return await controller.parse_job(data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/", response_model=ProfileResponse, tags=["Profile"])

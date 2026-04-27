@@ -19,15 +19,30 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuthStore } from "@/lib/store";
 
-const items = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { label: "Profile", icon: User, href: "/profile" },
-  { label: "Experiences", icon: Briefcase, href: "/experiences" },
-  { label: "Skills", icon: Wrench, href: "/skills" },
-  { label: "Projects", icon: FolderKanban, href: "/projects" },
-  { label: "Titles", icon: Trophy, href: "/titles" },
-  { label: "Jobs", icon: Briefcase, href: "/jobs" },
-  { label: "Resume Builder", icon: FileText, href: "/resume-builder" },
+const groups = [
+  {
+    title: "Core",
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+    ]
+  },
+  {
+    title: "Knowledge Base",
+    items: [
+      { label: "Profile", icon: User, href: "/profile" },
+      { label: "Experiences", icon: Briefcase, href: "/experiences" },
+      { label: "Skills", icon: Wrench, href: "/skills" },
+      { label: "Projects", icon: FolderKanban, href: "/projects" },
+      { label: "Titles", icon: Trophy, href: "/titles" },
+    ]
+  },
+  {
+    title: "Job Hunt",
+    items: [
+      { label: "Jobs", icon: Briefcase, href: "/jobs" },
+      { label: "Resume Builder", icon: FileText, href: "/resume-builder" },
+    ]
+  }
 ];
 
 export function Sidebar() {
@@ -58,22 +73,33 @@ export function Sidebar() {
         </Button>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
-        {items.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all hover:bg-accent hover:text-accent-foreground",
-              pathname === item.href
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground",
-              collapsed && "justify-center"
+      <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+        {groups.map((group, idx) => (
+          <div key={idx} className="space-y-2">
+            {!collapsed && (
+              <h3 className="px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                {group.title}
+              </h3>
             )}
-          >
-            <item.icon size={20} />
-            {!collapsed && <span>{item.label}</span>}
-          </Link>
+            <div className="space-y-1">
+              {group.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all hover:bg-accent hover:text-accent-foreground",
+                    pathname === item.href
+                      ? "bg-primary text-primary-foreground shadow-sm font-medium"
+                      : "text-muted-foreground",
+                    collapsed && "justify-center"
+                  )}
+                >
+                  <item.icon size={20} className={cn(pathname === item.href ? "text-white" : "text-primary/70")} />
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 

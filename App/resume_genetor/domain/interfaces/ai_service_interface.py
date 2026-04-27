@@ -64,3 +64,8 @@ class AiServiceInterface(ABC):
     @abstractmethod
     async def generate_tags(self, user_id: str, title: TitleForAi) -> List[str]:
         pass
+
+    @abstractmethod
+    async def parse_job_description(self, raw_text: str) -> Dict[str, Any]:
+        """Extract job details (title, company, etc.) from raw text."""
+        pass
