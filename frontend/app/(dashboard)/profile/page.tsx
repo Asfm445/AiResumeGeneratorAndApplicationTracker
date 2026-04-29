@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { User, MapPin, Briefcase, Info, Save, Pencil, X, Calendar, Phone, Linkedin, Github } from "lucide-react";
+import { User, MapPin, Briefcase, Info, Save, Pencil, X, Calendar, Phone, Link2, GitBranch } from "lucide-react";
 import api from "@/lib/api";
 import { useToastStore } from "@/lib/store";
 
@@ -120,13 +120,13 @@ export default function ProfilePage() {
                 )}
                 {profile.linkedinUrl && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Linkedin size={16} className="text-primary" />
+                    <Link2 size={16} className="text-primary" />
                     <span className="truncate max-w-[150px]">{profile.linkedinUrl.replace('https://', '')}</span>
                   </div>
                 )}
                 {profile.githubUrl && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Github size={16} className="text-primary" />
+                    <GitBranch size={16} className="text-primary" />
                     <span className="truncate max-w-[150px]">{profile.githubUrl.replace('https://', '')}</span>
                   </div>
                 )}
@@ -247,7 +247,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
-                    <Linkedin size={14} className="text-muted-foreground" /> LinkedIn URL
+                     <Link2 size={14} className="text-muted-foreground" /> LinkedIn URL
                   </label>
                   <Input 
                     value={editedProfile.linkedinUrl}
@@ -259,7 +259,7 @@ export default function ProfilePage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
-                  <Github size={14} className="text-muted-foreground" /> GitHub URL
+                  <GitBranch size={14} className="text-muted-foreground" /> GitHub URL
                 </label>
                 <Input 
                   value={editedProfile.githubUrl}

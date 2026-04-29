@@ -120,6 +120,7 @@ class ResumeUseCase:
         ai_generated_resume = await self.ai_service.generate_resume(ai_input_data)
         
         # Combine with static profile data
+        # NOTE: education is placed AFTER **ai_generated_resume so the AI cannot overwrite it
         full_resume = {
             "name": profile.name,
             "email": profile.email,
@@ -127,8 +128,8 @@ class ResumeUseCase:
             "phone": profile.phone,
             "linkedin": profile.linkedin_url,
             "github": profile.github_url,
+            **ai_generated_resume,
             "education": data["ai_input_data"]["education"],
-            **ai_generated_resume
         }
 
         # Save generated resume if target_title_obj exists
@@ -196,6 +197,7 @@ class ResumeUseCase:
 
         ai_generated_resume = await self.ai_service.tailor_resume_to_jd(ai_input_data, job.job_description, job.job_title, job.company_name)
 
+        # NOTE: education is placed AFTER **ai_generated_resume so the AI cannot overwrite it
         full_resume = {
             "name": profile.name,
             "email": profile.email,
@@ -203,8 +205,8 @@ class ResumeUseCase:
             "phone": profile.phone,
             "linkedin": profile.linkedin_url,
             "github": profile.github_url,
+            **ai_generated_resume,
             "education": ai_input_data["education"],
-            **ai_generated_resume
         }
         
         latest_version = await self.resume_repo.get_latest_version_by_job(job.id)
@@ -235,11 +237,16 @@ class ResumeUseCase:
         # Single high-quality refinement with Truth context
         refined_data = await self.ai_service.refine_resume(resume.resume_data, comment, profile_data=profile_context)
         
+        # Preserve static fields (including education) from the stored resume; AI never touches these
         full_resume = {
-            "name": resume.resume_data["name"],
-            "email": resume.resume_data["email"],
-            "location": resume.resume_data["location"],
-            **refined_data
+            "name": resume.resume_data.get("name", ""),
+            "email": resume.resume_data.get("email", ""),
+            "location": resume.resume_data.get("location", ""),
+            "phone": resume.resume_data.get("phone", ""),
+            "linkedin": resume.resume_data.get("linkedin", ""),
+            "github": resume.resume_data.get("github", ""),
+            **refined_data,
+            "education": resume.resume_data.get("education", []),
         }
         
         # Save as a new version

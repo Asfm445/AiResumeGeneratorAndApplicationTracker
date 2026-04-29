@@ -23,7 +23,7 @@ class UpdateResumeRequest(BaseModel):
 class EvaluateResumeRequest(BaseModel):
     resume_id: int
 
-from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository, SqlAlchemyResumeRepository, SqlAlchemyJobRepository, SqlAlchemyEvaluationRepository
+from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemySkillRepository, SqlAlchemyProjectRepository, SqlAlchemyExprianceRepository, SqlAlchemyResumeRepository, SqlAlchemyJobRepository, SqlAlchemyEvaluationRepository, SqlAlchemyEducationRepository
 from App.resume_genetor.infrastructure.services.ai_service import AiService
 from App.resume_genetor.infrastructure.services.embedding_service import GeminiEmbeddingService
 
@@ -41,6 +41,7 @@ def get_resume_use_case(db: AsyncSession = Depends(get_db)):
     resume_repo = SqlAlchemyResumeRepository(db)
     job_repo = SqlAlchemyJobRepository(db)
     evaluation_repo = SqlAlchemyEvaluationRepository(db)
+    education_repo = SqlAlchemyEducationRepository(db)
     ai_service = AiService()
     embedding_service = GeminiEmbeddingService()
 
@@ -54,7 +55,8 @@ def get_resume_use_case(db: AsyncSession = Depends(get_db)):
         embedding_service=embedding_service,
         resume_repo=resume_repo,
         job_repo=job_repo,
-        evaluation_repo=evaluation_repo
+        evaluation_repo=evaluation_repo,
+        education_repo=education_repo
     )
 
 @router.get("/generate")
