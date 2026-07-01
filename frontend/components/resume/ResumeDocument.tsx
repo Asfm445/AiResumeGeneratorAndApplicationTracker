@@ -77,7 +77,7 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
   );
 
   const BulletPoints = ({ points, className }: { points: string[], className?: string }) => (
-    <ul className={`list-disc list-outside ml-4 space-y-1.5 ${className}`}>
+    <ul className={`list-disc list-outside ml-4 space-y-0.5 ${className}`}>
       {points.map((point, index) => (
         <li key={index} className="pl-1 text-justify">
           {point}
@@ -89,23 +89,23 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
   return (
     <div 
       id={id}
-      className={`bg-white text-[#1a1a1a] mx-auto p-12 min-h-[1056px] font-serif leading-relaxed text-sm antialiased border border-gray-100 ${preview ? 'shadow-none w-[816px]' : 'shadow-xl w-full max-w-[816px]'}`}
+      className={`bg-white text-[#1a1a1a] mx-auto p-8 min-h-[1056px] font-serif leading-normal text-sm antialiased border border-gray-100 ${preview ? 'shadow-none w-[816px]' : 'shadow-xl w-full max-w-[816px]'}`}
       style={{ boxSizing: 'border-box', backgroundColor: '#ffffff' }}
     >
       {/* Header */}
-      <header className="text-center mb-10">
-        <div className="mb-2">
+      <header className="text-center mb-6">
+        <div className="mb-1">
             {isEditable ? (
                 <input 
-                    className="text-4xl font-bold uppercase tracking-widest text-[#000000] text-center w-full bg-indigo-50/50 border-b border-indigo-200 outline-none"
+                    className="text-3xl font-bold uppercase tracking-widest text-[#000000] text-center w-full bg-indigo-50/50 border-b border-indigo-200 outline-none"
                     value={data?.name || ""}
                     onChange={(e) => handleChange('name', e.target.value)}
                     placeholder="YOUR NAME"
                 />
-            ) : <h1 className="text-4xl font-bold uppercase tracking-widest text-[#000000]">{data?.name || "Resume"}</h1>}
+            ) : <h1 className="text-3xl font-bold uppercase tracking-widest text-[#000000]">{data?.name || "Resume"}</h1>}
         </div>
-        
-        <div className="flex flex-wrap justify-center gap-4 text-xs text-[#4b5563] font-sans border-b border-[#e5e7eb] pb-4">
+
+        <div className="flex flex-wrap justify-center gap-4 text-xs text-[#4b5563] font-sans border-b border-[#e5e7eb] pb-3">
           <Input 
             value={data?.headline} 
             onChange={(v: string) => handleChange('headline', v)} 
@@ -126,20 +126,20 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
       </header>
 
       {/* Summary */}
-      <section className="mb-8">
-        <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-3 font-sans pb-1 tracking-widest">Professional Summary</h2>
+      <section className="mb-5">
+        <h2 className="text-sm font-bold uppercase border-b border-[#000000] mb-2 font-sans pb-1 tracking-widest">Professional Summary</h2>
         <TextArea 
           value={data?.professional_summary} 
           onChange={(v: string) => handleChange('professional_summary', v)} 
-          className="text-justify leading-6 italic text-[#374151]" 
+          className="text-justify leading-5 italic text-[#374151]" 
           comparisonValue={comparisonData?.professional_summary}
         />
       </section>
 
       {/* Experience */}
-      <section className="mb-8">
-        <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-4 font-sans pb-1 tracking-widest">Professional Experience</h2>
-        <div className="space-y-6">
+      <section className="mb-5">
+        <h2 className="text-sm font-bold uppercase border-b border-[#000000] mb-3 font-sans pb-1 tracking-widest">Professional Experience</h2>
+        <div className="space-y-4">
           {(data?.professional_experience || []).map((exp, i) => {
             const title = exp.job_title || exp.role_title || exp.position || exp.role || exp.title;
             const company = exp.company || exp.company_name || exp.organization;
@@ -149,25 +149,25 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
 
             return (
               <div key={i}>
-                <div className="flex justify-between items-baseline mb-1">
+                <div className="flex justify-between items-baseline">
                   <Input 
                       value={title} 
                       onChange={(v: string) => handleListChange('professional_experience', i, 'job_title', v)} 
-                      className="font-bold text-md text-[#0f172a]" 
+                      className="font-bold text-sm text-[#0f172a]" 
                   />
                   <Input 
                       value={dates} 
                       onChange={(v: string) => handleListChange('professional_experience', i, 'dates', v)} 
-                      className="text-xs font-sans text-[#6b7280] font-bold italic uppercase" 
+                      className="text-[10px] font-sans text-[#6b7280] font-bold italic uppercase" 
                   />
                 </div>
                 <Input 
                   value={company} 
                   onChange={(v: string) => handleListChange('professional_experience', i, 'company', v)} 
-                  className="font-bold text-sm text-[#1e1b4b] mb-2 font-sans tracking-tight uppercase block" 
+                  className="font-bold text-xs text-[#1e1b4b] mb-1 font-sans tracking-tight uppercase block" 
                 />
                 {(stack || isEditable) && (
-                  <div className="flex items-center gap-2 mb-2 italic font-serif text-[10px] text-[#6b7280]">
+                  <div className="flex items-center gap-2 mb-1 italic font-serif text-[10px] text-[#6b7280]">
                       <span>Stack:</span>
                       <Input 
                         value={Array.isArray(stack) ? stack.join(' • ') : stack} 
@@ -180,12 +180,12 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
                   <TextArea 
                     value={ensureArray(points).join('\n')} 
                     onChange={(v: string) => handleListChange('professional_experience', i, 'responsibilities', v)} 
-                    className="text-[#374151] text-sm" 
+                    className="text-[#374151] text-xs" 
                   />
                 ) : (
                   <BulletPoints 
                     points={ensureArray(points)} 
-                    className="text-[#374151] text-sm mt-2" 
+                    className="text-[#374151] text-xs mt-1" 
                   />
                 )}
               </div>
@@ -195,9 +195,9 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
       </section>
 
       {/* Projects */}
-      <section className="mb-8 font-sans">
-        <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-4 pb-1 tracking-widest">Projects</h2>
-        <div className="space-y-6">
+      <section className="mb-5 font-sans">
+        <h2 className="text-sm font-bold uppercase border-b border-[#000000] mb-3 pb-1 tracking-widest">Projects</h2>
+        <div className="space-y-4">
           {(data?.projects || []).map((proj, i) => {
             const title = proj.project_name || proj.name || proj.title;
             const role = proj.role || proj.job_title || proj.position;
@@ -207,7 +207,7 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
 
             return (
               <div key={i}>
-                <div className="flex justify-between items-baseline mb-1">
+                <div className="flex justify-between items-baseline">
                   <Input 
                       value={title} 
                       onChange={(v: string) => handleListChange('projects', i, 'project_name', v)} 
@@ -216,22 +216,22 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
                   <Input 
                       value={dates} 
                       onChange={(v: string) => handleListChange('projects', i, 'dates', v)} 
-                      className="text-xs text-[#6b7280] italic font-serif uppercase tracking-tighter" 
+                      className="text-[10px] text-[#6b7280] italic font-serif uppercase tracking-tighter" 
                   />
                 </div>
                 {(role || isEditable) && (
-                  <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] text-[#4338ca] font-bold uppercase tracking-widest">ROLE:</span>
+                  <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[9px] text-[#4338ca] font-bold uppercase tracking-widest">ROLE:</span>
                       <Input 
                         value={role} 
                         onChange={(v: string) => handleListChange('projects', i, 'role', v)} 
-                        className="text-[10px] text-[#4338ca] font-bold uppercase tracking-widest" 
+                        className="text-[9px] text-[#4338ca] font-bold uppercase tracking-widest" 
                       />
                   </div>
                 )}
-                
+
                 {(stack || isEditable) && (
-                  <div className="flex items-center gap-2 mb-2 italic font-serif text-[10px] text-[#6b7280]">
+                  <div className="flex items-center gap-2 mb-1 italic font-serif text-[10px] text-[#6b7280]">
                       <span>Stack:</span>
                       <Input 
                         value={Array.isArray(stack) ? stack.join(' • ') : stack} 
@@ -245,12 +245,12 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
                   <TextArea 
                     value={ensureArray(points).join('\n')} 
                     onChange={(v: string) => handleListChange('projects', i, 'description', v)} 
-                    className="text-[#374151] text-sm font-serif" 
+                    className="text-[#374151] text-xs font-serif" 
                   />
                 ) : (
                   <BulletPoints 
                     points={ensureArray(points)} 
-                    className="text-[#374151] text-sm font-serif mt-2" 
+                    className="text-[#374151] text-xs font-serif mt-1" 
                   />
                 )}
               </div>
@@ -261,24 +261,24 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
 
       {/* Education */}
       {(data?.education && data.education.length > 0) && (
-        <section className="mb-8 font-sans">
-          <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-4 pb-1 tracking-widest">Education</h2>
-          <div className="space-y-4">
+        <section className="mb-5 font-sans">
+          <h2 className="text-sm font-bold uppercase border-b border-[#000000] mb-3 pb-1 tracking-widest">Education</h2>
+          <div className="space-y-3">
             {data.education.map((edu, i) => (
               <div key={i}>
-                <div className="flex justify-between items-baseline mb-1">
+                <div className="flex justify-between items-baseline">
                   <span className="font-bold text-sm text-[#0f172a]">{edu.degree} {edu.field_of_study ? `in ${edu.field_of_study}` : ''}</span>
-                  <span className="text-xs text-[#6b7280] italic font-serif uppercase tracking-tighter">{edu.dates || `${edu.start_date} - ${edu.end_date || 'Present'}`}</span>
+                  <span className="text-[10px] text-[#6b7280] italic font-serif uppercase tracking-tighter">{edu.dates || `${edu.start_date} - ${edu.end_date || 'Present'}`}</span>
                 </div>
-                <div className="text-sm font-bold text-[#1e1b4b] uppercase tracking-tight">{edu.school || edu.institution}</div>
+                <div className="text-xs font-bold text-[#1e1b4b] uppercase tracking-tight">{edu.school || edu.institution}</div>
                 {edu.relevant_courses && (
-                  <div className="text-[10px] text-[#6b7280] mt-1 font-serif italic">
+                  <div className="text-[9px] text-[#6b7280] mt-0.5 font-serif italic">
                     <span className="font-bold uppercase not-italic mr-1">Relevant Coursework:</span>
                     {Array.isArray(edu.relevant_courses) ? edu.relevant_courses.join(', ') : edu.relevant_courses}
                   </div>
                 )}
                 {edu.relevant_coursework && (
-                  <div className="text-[10px] text-[#6b7280] mt-1 font-serif italic">
+                  <div className="text-[9px] text-[#6b7280] mt-0.5 font-serif italic">
                     <span className="font-bold uppercase not-italic mr-1">Relevant Coursework:</span>
                     {edu.relevant_coursework}
                   </div>
@@ -290,12 +290,12 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
       )}
 
       {/* Skills */}
-      <section className="mb-8 font-sans">
-        <h2 className="text-md font-bold uppercase border-b border-[#000000] mb-4 pb-1 tracking-widest">Technical Skills</h2>
-        <div className="space-y-2">
+      <section className="mb-5 font-sans">
+        <h2 className="text-sm font-bold uppercase border-b border-[#000000] mb-3 pb-1 tracking-widest">Technical Skills</h2>
+        <div className="space-y-1.5">
           {Object.entries(data?.skills || {}).map(([type, list]) => (
-            <div key={type} className="flex items-start text-xs border-l-2 border-[#e5e7eb] pl-4 py-1">
-              <span className="font-bold text-[#1e1b4b] uppercase tracking-tighter min-w-[150px] pt-0.5">
+            <div key={type} className="flex items-start text-[10px] border-l-2 border-[#e5e7eb] pl-3 py-0.5">
+              <span className="font-bold text-[#1e1b4b] uppercase tracking-tighter min-w-[140px] pt-0.5">
                 {type.replace(/_/g, ' ')}
               </span>
               <div className="flex-grow">
@@ -317,9 +317,10 @@ export function ResumeDocument({ data, id, preview = false, isEditable = false, 
       </section>
 
       {/* Footer */}
-      <footer className="mt-auto pt-10 text-[9px] text-[#9ca3af] text-center italic font-sans uppercase tracking-[0.3em]">
+      <footer className="mt-auto pt-6 text-[8px] text-[#9ca3af] text-center italic font-sans uppercase tracking-[0.3em]">
         AI Optimized • Built for modern careers
       </footer>
     </div>
   );
-}
+  }
+
