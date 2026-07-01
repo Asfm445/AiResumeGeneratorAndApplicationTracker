@@ -46,14 +46,14 @@ async function generate(data) {
     // ── Section heading ───────────────────────────────────────────────────────
     const sectionH = (label) =>
         `<h2 style="font-family:'Arial',sans-serif;font-size:9pt;font-weight:700;text-transform:uppercase;
-                    letter-spacing:0.12em;border-bottom:1.5px solid #000;padding-bottom:3px;
-                    margin:22px 0 10px 0;">${label}</h2>`;
+                    letter-spacing:0.12em;border-bottom:1.5px solid #000;padding-bottom:2px;
+                    margin:14px 0 6px 0;">${label}</h2>`;
 
     // ── Bullet list ───────────────────────────────────────────────────────────
     const bulletList = (points) =>
-        `<ul style="margin:6px 0 0 16px;padding:0;list-style:disc outside;">
+        `<ul style="margin:4px 0 0 16px;padding:0;list-style:disc outside;">
             ${ensureArray(points).filter(Boolean).map(p =>
-                `<li style="margin-bottom:4px;text-align:justify;padding-left:2px;">${p}</li>`
+                `<li style="margin-bottom:2px;text-align:justify;padding-left:2px;">${p}</li>`
             ).join('')}
         </ul>`;
 
@@ -69,15 +69,15 @@ async function generate(data) {
                         || exp.achievements || exp.short_description || exp.description || exp.highlights;
 
         return `
-        <div style="margin-bottom:18px;">
+        <div style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;align-items:baseline;">
                 <span style="font-weight:700;font-size:10.5pt;color:#0f172a;">${title}</span>
                 <span style="font-size:8pt;font-style:italic;text-transform:uppercase;
                              letter-spacing:0.06em;color:#6b7280;font-family:'Arial',sans-serif;">${dates}</span>
             </div>
             <div style="font-family:'Arial',sans-serif;font-weight:700;font-size:9pt;
-                        text-transform:uppercase;letter-spacing:0.05em;color:#1e1b4b;margin:2px 0 4px 0;">${company}</div>
-            ${stack ? `<div style="font-style:italic;font-size:8pt;color:#6b7280;margin-bottom:4px;">
+                        text-transform:uppercase;letter-spacing:0.05em;color:#1e1b4b;margin:1px 0 3px 0;">${company}</div>
+            ${stack ? `<div style="font-style:italic;font-size:8pt;color:#6b7280;margin-bottom:2px;">
                 Stack: ${Array.isArray(stack) ? stack.join(' • ') : stack}
             </div>` : ''}
             ${bulletList(points)}
@@ -97,15 +97,15 @@ async function generate(data) {
                         || proj.short_description;
 
         return `
-        <div style="margin-bottom:18px;">
+        <div style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;align-items:baseline;">
                 <span style="font-weight:700;font-size:10pt;color:#0f172a;">${title}</span>
                 <span style="font-size:8pt;font-style:italic;text-transform:uppercase;
                              letter-spacing:0.06em;color:#6b7280;">${dates}</span>
             </div>
             ${role ? `<div style="font-size:8pt;font-weight:700;text-transform:uppercase;
-                                  letter-spacing:0.1em;color:#4338ca;margin:2px 0;">ROLE: ${role}</div>` : ''}
-            ${stack ? `<div style="font-style:italic;font-size:8pt;color:#6b7280;margin-bottom:4px;">
+                                  letter-spacing:0.1em;color:#4338ca;margin:1px 0;">ROLE: ${role}</div>` : ''}
+            ${stack ? `<div style="font-style:italic;font-size:8pt;color:#6b7280;margin-bottom:2px;">
                 Stack: ${Array.isArray(stack) ? stack.join(' • ') : stack}
             </div>` : ''}
             ${bulletList(points)}
@@ -123,20 +123,21 @@ async function generate(data) {
         const courses = edu.relevant_courses || edu.relevant_coursework || edu.coursework;
 
         return `
-        <div style="margin-bottom:14px;">
+        <div style="margin-bottom:10px;">
             <div style="display:flex;justify-content:space-between;align-items:baseline;">
                 <span style="font-weight:700;font-size:10pt;color:#0f172a;">${degree}${field}</span>
                 <span style="font-size:8pt;font-style:italic;text-transform:uppercase;
                              letter-spacing:0.05em;color:#6b7280;">${dates}</span>
             </div>
             <div style="font-family:'Arial',sans-serif;font-weight:700;font-size:9pt;
-                        text-transform:uppercase;letter-spacing:0.05em;color:#1e1b4b;margin:2px 0;">${school}</div>
-            ${courses ? `<div style="font-size:8pt;font-style:italic;color:#6b7280;margin-top:2px;">
+                        text-transform:uppercase;letter-spacing:0.05em;color:#1e1b4b;margin:1px 0;">${school}</div>
+            ${courses ? `<div style="font-size:8pt;font-style:italic;color:#6b7280;margin-top:1px;">
                 <span style="font-weight:700;font-style:normal;text-transform:uppercase;margin-right:4px;">Relevant Coursework:</span>
                 ${Array.isArray(courses) ? courses.join(', ') : courses}
             </div>` : ''}
         </div>`;
     }).join('');
+
 
     // ── Skills rows ───────────────────────────────────────────────────────────
     const skillsHtml = Object.entries(skills).map(([type, list]) => `
@@ -162,26 +163,26 @@ async function generate(data) {
   body {
     font-family: Georgia, 'Times New Roman', Times, serif;
     font-size: 10pt;
-    line-height: 1.6;
+    line-height: 1.4;
     color: #1a1a1a;
     background: #ffffff;
   }
   .page {
     width: 816px;
     min-height: 1056px;
-    padding: 48px;
+    padding: 32px 40px;
     background: #ffffff;
   }
   /* Header */
   .resume-name {
-    font-size: 28pt;
+    font-size: 26pt;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.15em;
     color: #000000;
     text-align: center;
     line-height: 1.1;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
   .contact-row {
     display: flex;
@@ -193,7 +194,7 @@ async function generate(data) {
     font-family: Arial, sans-serif;
     color: #4b5563;
     border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 10px;
+    padding-bottom: 8px;
     margin-bottom: 0;
   }
   /* Summary italic */
@@ -201,11 +202,11 @@ async function generate(data) {
     font-style: italic;
     color: #374151;
     text-align: justify;
-    line-height: 1.7;
+    line-height: 1.5;
   }
   /* Footer */
   .footer {
-    margin-top: 40px;
+    margin-top: 20px;
     font-size: 7pt;
     color: #9ca3af;
     text-align: center;
@@ -220,45 +221,46 @@ async function generate(data) {
 <div class="page">
 
   <!-- Header -->
-  <header style="text-align:center;margin-bottom:24px;">
+  <header style="text-align:center;margin-bottom:12px;">
     <div class="resume-name">${data.name || 'Resume'}</div>
     <div class="contact-row">${contactItems}</div>
   </header>
 
   <!-- Summary -->
   ${(data.professional_summary || data.summary) ? `
-  <section style="margin-bottom:22px;">
+  <section style="margin-bottom:14px;">
     ${sectionH('Professional Summary')}
     <p class="summary-text">${data.professional_summary || data.summary}</p>
   </section>` : ''}
 
   <!-- Experience -->
   ${experiences.length > 0 ? `
-  <section style="margin-bottom:22px;">
+  <section style="margin-bottom:14px;">
     ${sectionH('Professional Experience')}
     ${expHtml}
   </section>` : ''}
 
   <!-- Projects -->
   ${projects.length > 0 ? `
-  <section style="margin-bottom:22px;font-family:Arial,sans-serif;">
+  <section style="margin-bottom:14px;font-family:Arial,sans-serif;">
     ${sectionH('Projects')}
     ${projHtml}
   </section>` : ''}
 
   <!-- Education -->
   ${education.length > 0 ? `
-  <section style="margin-bottom:22px;font-family:Arial,sans-serif;">
+  <section style="margin-bottom:14px;font-family:Arial,sans-serif;">
     ${sectionH('Education')}
     ${eduHtml}
   </section>` : ''}
 
   <!-- Skills -->
   ${Object.keys(skills).length > 0 ? `
-  <section style="margin-bottom:22px;font-family:Arial,sans-serif;">
+  <section style="margin-bottom:14px;font-family:Arial,sans-serif;">
     ${sectionH('Technical Skills')}
     <div style="margin-top:6px;">${skillsHtml}</div>
   </section>` : ''}
+
 
   <div class="footer">AI Optimized • Built for modern careers</div>
 </div>
