@@ -10,6 +10,7 @@ from App.profile_management.application.use_cases.job_use_cases import JobUseCas
 from App.profile_management.application.use_cases.education_use_cases import EducationUseCase
 from App.profile_management.infrastructure.repositories.sql_repositories import SqlAlchemyProfileRepository, SqlAlchemyTitleRepository, SqlAlchemyProjectRepository, SqlAlchemyTagRepository, SqlAlchemyExprianceRepository, SqlAlchemySkillRepository, SqlAlchemyJobRepository, SqlAlchemyEducationRepository
 from App.resume_genetor.infrastructure.services.ai_service import AiService
+from App.profile_management.infrastructure.queue.redis_queue import enqueue_embedding_task
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -366,6 +367,8 @@ class ProfileController:
 
     async def create_title(self, user_id: str, data: TitleCreate):
         saved_title = await self.create_title_uc.execute(user_id, data.name, data.priority, data.description)
+        if saved_title and saved_title.id:
+            enqueue_embedding_task("title", saved_title.id)
         return TitleResponse(
             id=str(saved_title.id),
             name=saved_title.title_name,
@@ -394,6 +397,7 @@ class ProfileController:
         )
         if not updated_title:
              return None
+        enqueue_embedding_task("title", updated_title.id)
         return TitleResponse(
             id=str(updated_title.id),
             name=updated_title.title_name,
@@ -434,7 +438,9 @@ class ProfileController:
         return {"message": "Tags attached"}
 
     async def create_project_description(self, project_id: int, data: DescriptionCreate):
-        await self.create_description_uc.execute(project_id, data.type, data.text)
+        saved_desc = await self.create_description_uc.execute(project_id, data.type, data.text)
+        if saved_desc and saved_desc.id:
+            enqueue_embedding_task("project", saved_desc.id)
         return {"message": "Description created"}
 
     async def list_projects(self, user_id: str):
@@ -505,6 +511,8 @@ class ProfileController:
             tech_stack=data.tech_stack,
             end_date=data.end_date
         )
+        if saved and saved.id:
+            enqueue_embedding_task("experience", saved.id)
         return ExprianceResponse(
             id=saved.id,
             company_name=saved.company_name,
@@ -530,6 +538,7 @@ class ProfileController:
         )
         if not updated:
             return None
+        enqueue_embedding_task("experience", updated.id)
         return ExprianceResponse(
             id=updated.id,
             company_name=updated.company_name,

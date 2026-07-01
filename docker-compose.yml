@@ -10,8 +10,10 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+      - REDIS_HOST=redis
     depends_on:
       - db
+      - redis
 
   db:
     image: pgvector/pgvector:pg15
@@ -26,6 +28,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
   worker:
     build: ./Worker
     container_name: worker
@@ -33,8 +41,10 @@ services:
       - ./Worker:/app
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
     depends_on:
       - db
+      - redis
 
 volumes:
   postgres_data:
