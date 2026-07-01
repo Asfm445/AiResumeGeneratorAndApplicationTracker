@@ -11,13 +11,16 @@ The project is structured as a multi-service application managed using Docker Co
 1.  **FastAPI Backend (`/App`)**:
     *   Implements **Domain-Driven Design (DDD) / Clean Architecture** principles.
     *   Exposes APIs for user authentication (JWT), profile management (experiences, projects, skills, education, job titles), and AI resume tailoring.
+    *   Publishes embedding tasks to a **Redis task queue** upon profile updates.
     *   Uses **SQLAlchemy (async)** for database access and **Alembic** for migrations.
 2.  **Vector Database (`pgvector`)**:
     *   PostgreSQL extended with `pgvector` to store raw text and high-dimensional semantic embeddings (384-dimensional vectors).
-3.  **Background Embedding Worker (`/Worker`)**:
-    *   Polls the database for newly created experiences, projects, or job titles.
+3.  **Redis Message Broker**:
+    *   Coordinates task distribution between the web server and background worker. Employs a Redis list (`embedding_queue`) for rapid, non-blocking task handling.
+4.  **Background Embedding Worker (`/Worker`)**:
+    *   Listens to the Redis `embedding_queue` using blocking queue operations (`BLPOP`).
     *   Calls the Google Gemini Embedding API to generate embeddings and saves them to the database to enable semantic search capabilities.
-4.  **Next.js Frontend (`/frontend`)**:
+5.  **Next.js Frontend (`/frontend`)**:
     *   A responsive React dashboard using Next.js, TypeScript, and Tailwind CSS.
     *   Provides user profile builders, a job application tracker, and a custom resume-builder workbench.
 
@@ -110,6 +113,6 @@ alembic revision --autogenerate -m "description of changes"
 
 ## How the Resume Tailoring Works
 
-1.  **Ingestion & Vectors:** When you add a new experience, skill, or project, the backend saves it. The `Worker` automatically embeds this item using Gemini and registers it in PostgreSQL.
+1.  **Ingestion & Vectors:** When you add a new experience, skill, or project, the backend saves it and enqueues a task to the Redis `embedding_queue`. The background `Worker` immediately pops the task, embeds the item using Gemini, and updates the database.
 2.  **Semantic Match:** When you paste a Job Description (JD), the backend computes the embedding of the JD and queries PostgreSQL using `pgvector` operators to fetch the most semantically relevant projects and experiences.
 3.  **Refinement:** The selected resume blocks are fed into the Google Gemini LLM alongside instructions to rewrite them focusing on the key duties and keywords present in the JD, outputting a highly tailored professional resume.
