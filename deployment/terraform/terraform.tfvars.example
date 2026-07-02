@@ -1,0 +1,6 @@
+# Duplicate this file to "terraform.tfvars" and fill in your values.
+# "terraform.tfvars" is ignored by git and will not be pushed to GitHub.
+
+db_password    = "PutAStrongPasswordHere123!"
+jwt_secret_key = "PutAUniqueJWTSecretKeyHere"
+ecr_repo_url   = "YOUR_AWS_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/resume-tracker-app"

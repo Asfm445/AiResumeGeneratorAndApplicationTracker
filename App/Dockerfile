@@ -17,5 +17,8 @@ ENV PYTHONPATH=/app
 # Expose port
 EXPOSE 8000
 
+# Make startup script executable
+RUN chmod +x /app/App/start.sh
+
 # Command to run the app
-CMD ["uvicorn", "App.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["sh", "/app/App/start.sh"]
