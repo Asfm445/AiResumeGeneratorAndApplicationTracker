@@ -116,3 +116,63 @@ alembic revision --autogenerate -m "description of changes"
 1.  **Ingestion & Vectors:** When you add a new experience, skill, or project, the backend saves it and enqueues a task to the Redis `embedding_queue`. The background `Worker` immediately pops the task, embeds the item using Gemini, and updates the database.
 2.  **Semantic Match:** When you paste a Job Description (JD), the backend computes the embedding of the JD and queries PostgreSQL using `pgvector` operators to fetch the most semantically relevant projects and experiences.
 3.  **Refinement:** The selected resume blocks are fed into the Google Gemini LLM alongside instructions to rewrite them focusing on the key duties and keywords present in the JD, outputting a highly tailored professional resume.
+
+---
+
+## Production Deployment (AWS & Terraform)
+
+The project includes a production-grade infrastructure deployment suite managed via **Terraform** targeting the **`eu-north-1`** (Stockholm) region.
+
+### 🏗️ AWS Cloud Architecture Components
+The Terraform configuration in `deployment/terraform/` is divided into modular stacks:
+*   **`vpc.tf`**: Sets up VPC network isolation, Multi-AZ subnets, NAT Gateways, and Internet Gateways.
+*   **`security_groups.tf`**: Configures access security rules separating ALB, ECS container tasks, RDS Postgres DB, and ElastiCache Redis nodes.
+*   **`database.tf`**: Provisions a PostgreSQL RDS instance (with native `pgvector` support) and a Redis cluster broker.
+*   **`queues.tf`**: Provisions an Amazon SQS Queue for task distribution.
+*   **`ecs.tf`**: Defines the ECS Fargate cluster, serverless task definitions, IAM Task Roles (CloudWatch, SQS, SSM policies), Application Load Balancers (ALB), and target routing listener rules.
+
+### 🚀 Deploying to AWS
+
+1.  **Configure AWS Credentials**:
+    Ensure your terminal is authenticated with your target region (`eu-north-1`):
+    ```bash
+    aws configure
+    ```
+2.  **Build and Push the Container**:
+    Create your registry and push the FastAPI backend Docker image to ECR:
+    ```bash
+    # Create the repository
+    aws ecr create-repository --repository-name resume-tracker-app --region eu-north-1
+    
+    # Authenticate Docker with ECR
+    aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com
+    
+    # Build, tag and push
+    docker build -t resume-tracker-app ./App
+    docker tag resume-tracker-app:latest YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/resume-tracker-app:latest
+    docker push YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/resume-tracker-app:latest
+    ```
+3.  **Provision with Terraform**:
+    Initialize the workspace, copy the variable templates, and run the plan:
+    ```bash
+    cd deployment/terraform
+    cp terraform.tfvars.example terraform.tfvars
+    # Fill in your ECR URL and DB passwords in terraform.tfvars
+    
+    terraform init
+    terraform apply
+    ```
+
+### ⚡ Database Migrations & ECS Exec
+*   **Auto-Migration on Startup**: The ECS containers use [App/start.sh] to execute Alembic migrations dynamically on Fargate boot, keeping the RDS database schema up-to-date.
+*   **Debugging via ECS Exec**: Debug container internals interactively by logging directly into Fargate tasks:
+    ```bash
+    aws ecs execute-command \
+      --cluster resume-tracker-cluster \
+      --task <TASK_ID> \
+      --container app \
+      --command "/bin/sh" \
+      --interactive \
+      --region eu-north-1
+    ```
+
