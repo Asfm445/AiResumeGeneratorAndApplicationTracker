@@ -55,6 +55,28 @@ resource "aws_iam_role_policy_attachment" "ecs_task_sqs" {
   policy_arn = aws_iam_policy.ecs_sqs_publish.arn
 }
 
+resource "aws_iam_policy" "ecs_exec" {
+  name = "ecs-exec-ssm-policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_exec" {
+  role       = aws_iam_role.ecs_task.name
+  policy_arn = aws_iam_policy.ecs_exec.arn
+}
+
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/resume-tracker-app"
   retention_in_days = 7
@@ -137,6 +159,7 @@ resource "aws_ecs_service" "app" {
   task_definition = aws_ecs_task_definition.app.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     subnets          = aws_subnet.private[*].id
